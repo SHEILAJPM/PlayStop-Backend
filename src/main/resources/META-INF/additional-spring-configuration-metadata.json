@@ -1,0 +1,14 @@
+{
+  "properties": [
+    {
+      "name": "jwt.secret",
+      "type": "java.lang.String",
+      "description": "Clave secreta para firmar los tokens JWT"
+    },
+    {
+      "name": "jwt.expiration",
+      "type": "java.lang.Long",
+      "description": "Tiempo de expiración del JWT en milisegundos"
+    }
+  ]
+}
