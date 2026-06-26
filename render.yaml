@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: playstop-backend
+    runtime: java
+    buildCommand: "./mvnw clean package -DskipTests"
+    startCommand: "java -jar target/playstop-backend-0.0.1-SNAPSHOT.jar"
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: JAVA_VERSION
+        value: "17"
