@@ -1,0 +1,54 @@
+# ============================================================
+# PlayStop API - Autenticacion
+# ============================================================
+
+@baseUrl = http://localhost:8080
+@contentType = application/json
+
+### Registrar jugador
+POST {{baseUrl}}/api/auth/register/player
+Content-Type: {{contentType}}
+
+{
+  "nombre": "Ana Garcia",
+  "email": "ana@playstop.com",
+  "password": "Contrasena123"
+}
+
+### Registrar propietario de cancha
+POST {{baseUrl}}/api/auth/register/owner
+Content-Type: {{contentType}}
+
+{
+  "nombre": "Carlos Lopez",
+  "email": "carlos@playstop.com",
+  "password": "Contrasena123"
+}
+
+### Login (devuelve el token JWT)
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "ana@playstop.com",
+  "password": "Contrasena123"
+}
+
+### Solicitar codigo de recuperacion de contrasena
+POST {{baseUrl}}/api/auth/forgot-password
+Content-Type: {{contentType}}
+
+{
+  "email": "ana@playstop.com"
+}
+
+### Restablecer contrasena con el codigo recibido por email
+POST {{baseUrl}}/api/auth/reset-password
+Content-Type: {{contentType}}
+
+{
+  "token": "CODIGO_RECIBIDO_POR_EMAIL",
+  "nuevaContrasena": "NuevaContrasena456",
+  "confirmarContrasena": "NuevaContrasena456"
+}

@@ -1,0 +1,49 @@
+# ============================================================
+# PlayStop API - Panel de Administracion
+# Requiere token con rol ADMIN
+# ============================================================
+
+@baseUrl = http://localhost:8080
+@token = PEGAR_TOKEN_JWT_ADMIN_AQUI
+@userId = REEMPLAZAR_CON_UUID_DE_USUARIO
+@courtId = REEMPLAZAR_CON_UUID_DE_CANCHA
+
+### Estadisticas generales
+GET {{baseUrl}}/api/admin/stats
+Authorization: Bearer {{token}}
+
+### Analytics: ingresos y reservas por mes
+GET {{baseUrl}}/api/admin/analytics
+Authorization: Bearer {{token}}
+
+### Listar todos los jugadores
+GET {{baseUrl}}/api/admin/users
+Authorization: Bearer {{token}}
+
+### Activar o desactivar un jugador
+PATCH {{baseUrl}}/api/admin/users/{{userId}}/toggle-status
+Authorization: Bearer {{token}}
+
+### Eliminar un jugador
+DELETE {{baseUrl}}/api/admin/users/{{userId}}
+Authorization: Bearer {{token}}
+
+### Listar todos los propietarios
+GET {{baseUrl}}/api/admin/owners
+Authorization: Bearer {{token}}
+
+### Ver canchas de un propietario
+GET {{baseUrl}}/api/admin/owners/{{userId}}/courts
+Authorization: Bearer {{token}}
+
+### Listar todas las canchas
+GET {{baseUrl}}/api/admin/courts
+Authorization: Bearer {{token}}
+
+### Activar o desactivar una cancha
+PATCH {{baseUrl}}/api/admin/courts/{{courtId}}/toggle-status
+Authorization: Bearer {{token}}
+
+### Ver todas las reservas del sistema
+GET {{baseUrl}}/api/admin/all-reservations
+Authorization: Bearer {{token}}

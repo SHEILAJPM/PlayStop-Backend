@@ -1,0 +1,54 @@
+# ============================================================
+# PlayStop API - Reservas
+# IDs son UUID - reemplazar con UUIDs reales
+# ============================================================
+
+@baseUrl = http://localhost:8080
+@contentType = application/json
+@token = PEGAR_TOKEN_JWT_AQUI
+@reservationId = REEMPLAZAR_CON_UUID_DE_RESERVA
+@courtId = REEMPLAZAR_CON_UUID_DE_CANCHA
+
+### Crear nueva reserva (solo USER/JUGADOR)
+POST {{baseUrl}}/api/reservations
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "courtId": "{{courtId}}",
+  "fecha": "2026-06-20",
+  "horaInicio": "10:00",
+  "duracionMinutos": 60
+}
+
+### Ver mis reservas (solo USER/JUGADOR)
+GET {{baseUrl}}/api/reservations/my
+Authorization: Bearer {{token}}
+
+### Ver detalle de una reserva (USER)
+GET {{baseUrl}}/api/reservations/{{reservationId}}
+Authorization: Bearer {{token}}
+
+### Cancelar reserva (USER)
+PATCH {{baseUrl}}/api/reservations/{{reservationId}}/cancel
+Authorization: Bearer {{token}}
+
+### Descargar QR de la reserva (USER)
+GET {{baseUrl}}/api/reservations/{{reservationId}}/qr
+Authorization: Bearer {{token}}
+
+### Ver reservas de mi cancha (solo OWNER)
+GET {{baseUrl}}/api/reservations/court/{{courtId}}
+Authorization: Bearer {{token}}
+
+### Verificar reserva escaneando QR (OWNER)
+GET {{baseUrl}}/api/reservations/verify/{{reservationId}}
+Authorization: Bearer {{token}}
+
+### Confirmar asistencia (OWNER)
+PATCH {{baseUrl}}/api/reservations/{{reservationId}}/confirm-attendance
+Authorization: Bearer {{token}}
+
+### Cancelar reserva como propietario (OWNER)
+PATCH {{baseUrl}}/api/reservations/{{reservationId}}/cancel-by-owner
+Authorization: Bearer {{token}}

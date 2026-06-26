@@ -1,0 +1,13 @@
+# ============================================================
+# PlayStop API - Health check y prueba de conexion
+# ============================================================
+
+@baseUrl = http://localhost:8080
+
+### Verificar que el servidor esta corriendo
+GET {{baseUrl}}/actuator/health
+Accept: application/json
+
+### Prueba rapida de conexion
+GET {{baseUrl}}/api/courts
+Accept: application/json

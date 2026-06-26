@@ -1,0 +1,57 @@
+# ============================================================
+# PlayStop API - Canchas deportivas
+# IDs son UUID - reemplazar COURT_ID con el UUID real
+# ============================================================
+
+@baseUrl = http://localhost:8080
+@contentType = application/json
+@token = PEGAR_TOKEN_JWT_AQUI
+@courtId = REEMPLAZAR_CON_UUID_DE_CANCHA
+
+### Listar todas las canchas (publico, sin token)
+GET {{baseUrl}}/api/courts
+Accept: application/json
+
+### Ver detalle de una cancha
+GET {{baseUrl}}/api/courts/{{courtId}}
+Authorization: Bearer {{token}}
+
+### Ver horarios disponibles de una cancha para una fecha
+GET {{baseUrl}}/api/courts/{{courtId}}/slots?date=2026-06-20
+Authorization: Bearer {{token}}
+
+### Mis canchas (solo OWNER)
+GET {{baseUrl}}/api/courts/my
+Authorization: Bearer {{token}}
+
+### Crear nueva cancha (solo OWNER)
+POST {{baseUrl}}/api/courts
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "nombre": "Cancha Norte Premium",
+  "descripcion": "Cancha de futbol 5 con cesped sintetico",
+  "deporte": "Futbol",
+  "precioPorHora": 60.00,
+  "direccion": "Av. Los Pinos 345",
+  "ciudad": "Lima"
+}
+
+### Actualizar cancha (solo OWNER)
+PUT {{baseUrl}}/api/courts/{{courtId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "nombre": "Cancha Norte Premium",
+  "descripcion": "Cancha renovada con iluminacion LED",
+  "deporte": "Futbol",
+  "precioPorHora": 70.00,
+  "direccion": "Av. Los Pinos 345",
+  "ciudad": "Lima"
+}
+
+### Eliminar cancha (OWNER o ADMIN)
+DELETE {{baseUrl}}/api/courts/{{courtId}}
+Authorization: Bearer {{token}}

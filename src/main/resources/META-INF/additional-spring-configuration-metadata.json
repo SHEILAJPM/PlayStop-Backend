@@ -1,0 +1,45 @@
+﻿{
+  "properties": [
+    {
+      "name": "jwt.secret",
+      "type": "java.lang.String",
+      "description": "Clave secreta para firmar tokens JWT (minimo 256 bits en Base64)"
+    },
+    {
+      "name": "jwt.expiration",
+      "type": "java.lang.Long",
+      "description": "Tiempo de expiracion del token JWT en milisegundos (default: 86400000 = 24h)"
+    },
+    {
+      "name": "app.upload.dir",
+      "type": "java.lang.String",
+      "description": "Directorio del sistema de archivos donde se guardan las imagenes subidas"
+    },
+    {
+      "name": "app.base-url",
+      "type": "java.lang.String",
+      "description": "URL publica base del backend, usada en correos y generacion de enlaces"
+    },
+    {
+      "name": "app.mail.from",
+      "type": "java.lang.String",
+      "description": "Direccion de correo electronico del remitente de notificaciones"
+    },
+    {
+      "name": "twilio.account.sid",
+      "type": "java.lang.String",
+      "description": "Account SID de Twilio para envio de mensajes WhatsApp"
+    },
+    {
+      "name": "twilio.auth.token",
+      "type": "java.lang.String",
+      "description": "Auth Token de Twilio"
+    },
+    {
+      "name": "twilio.whatsapp.from",
+      "type": "java.lang.String",
+      "description": "Numero de WhatsApp emisor configurado en Twilio Sandbox",
+      "defaultValue": "whatsapp:+14155238886"
+    }
+  ]
+}
