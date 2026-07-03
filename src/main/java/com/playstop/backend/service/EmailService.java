@@ -244,8 +244,7 @@ public class EmailService {
         );
 
         String qrBase64 = Base64.getEncoder().encodeToString(qrBytes);
-        String contentWithQr = content.replace("cid:qrCode", "data:image/png;base64," + qrBase64);
-        sendHtmlEmail(toEmail, "✅ Reserva confirmada - PlayStop", buildEmail(contentWithQr));
+        sendHtmlEmailWithInlineImage(toEmail, "✅ Reserva confirmada - PlayStop", buildEmail(content), qrBase64);
     }
 
     // ─── EMAIL: CONFIRMACIÓN DE RESERVA (sin QR — fallback) ──────────────────
@@ -760,6 +759,35 @@ public class EmailService {
     }
 
     // ─── MÉTODO INTERNO ───────────────────────────────────────────────────────
+
+    private void sendHtmlEmailWithInlineImage(String to, String subject, String htmlBody, String imageBase64) {
+        log.info("Enviando email con imagen inline '{}' a: {}", subject, to);
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(resendApiKey);
+
+            Map<String, Object> attachment = new HashMap<>();
+            attachment.put("filename", "qr-reserva.png");
+            attachment.put("content", imageBase64);
+            attachment.put("content_id", "qrCode");
+            attachment.put("content_disposition", "inline");
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("from", "PlayStop <" + fromEmail + ">");
+            body.put("to", List.of(to));
+            body.put("subject", subject);
+            body.put("html", htmlBody);
+            body.put("attachments", List.of(attachment));
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            restTemplate.postForEntity("https://api.resend.com/emails", entity, String.class);
+            log.info("Email con imagen inline enviado exitosamente a: {}", to);
+        } catch (Exception e) {
+            log.error("Error al enviar email con imagen a {}: {}", to, e.getMessage(), e);
+            throw new RuntimeException("Error al enviar email: " + e.getMessage());
+        }
+    }
 
     private void sendHtmlEmail(String to, String subject, String htmlBody) {
         log.info("Enviando email '{}' a: {}", subject, to);
