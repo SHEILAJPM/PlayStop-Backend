@@ -3,23 +3,30 @@ package com.playstop.backend.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
-import jakarta.mail.internet.MimeMessage;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private final RestTemplate restTemplate;
 
     @Value("${app.mail.from}")
     private String fromEmail;
+
+    @Value("${RESEND_API_KEY:}")
+    private String resendApiKey;
 
     // ─── PLANTILLA BASE ───────────────────────────────────────────────────────
 
@@ -236,20 +243,9 @@ public class EmailService {
             reservationId
         );
 
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(fromEmail, "PlayStop");
-            helper.setTo(toEmail);
-            helper.setSubject("✅ Reserva confirmada - PlayStop");
-            helper.setText(buildEmail(content), true);
-            helper.addInline("qrCode", new ByteArrayResource(qrBytes), "image/png");
-            mailSender.send(message);
-            log.info("Email con QR enviado exitosamente a: {}", toEmail);
-        } catch (Exception e) {
-            log.error("Error al enviar email con QR a {}: {}", toEmail, e.getMessage(), e);
-            throw new RuntimeException("Error al enviar email con QR: " + e.getMessage());
-        }
+        String qrBase64 = Base64.getEncoder().encodeToString(qrBytes);
+        String contentWithQr = content.replace("cid:qrCode", "data:image/png;base64," + qrBase64);
+        sendHtmlEmail(toEmail, "✅ Reserva confirmada - PlayStop", buildEmail(contentWithQr));
     }
 
     // ─── EMAIL: CONFIRMACIÓN DE RESERVA (sin QR — fallback) ──────────────────
@@ -768,13 +764,18 @@ public class EmailService {
     private void sendHtmlEmail(String to, String subject, String htmlBody) {
         log.info("Enviando email '{}' a: {}", subject, to);
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(fromEmail, "PlayStop");
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(htmlBody, true);
-            mailSender.send(message);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(resendApiKey);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("from", "PlayStop <" + fromEmail + ">");
+            body.put("to", List.of(to));
+            body.put("subject", subject);
+            body.put("html", htmlBody);
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            restTemplate.postForEntity("https://api.resend.com/emails", entity, String.class);
             log.info("Email enviado exitosamente a: {}", to);
         } catch (Exception e) {
             log.error("Error al enviar email a {}: {}", to, e.getMessage(), e);
