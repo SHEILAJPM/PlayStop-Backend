@@ -1,10 +1,28 @@
 services:
   - type: web
     name: playstop-backend
-    runtime: java
-    buildCommand: "./mvnw clean package -DskipTests"
-    startCommand: "java -jar target/playstop-backend-0.0.1-SNAPSHOT.jar"
+    runtime: docker
+    repo: https://github.com/SHEILAJPM/PlayStop-Backend
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    region: oregon
+    plan: free
     healthCheckPath: /actuator/health
     envVars:
-      - key: JAVA_VERSION
-        value: "17"
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: APP_BASE_URL
+        value: https://playstop-backend-1.onrender.com
