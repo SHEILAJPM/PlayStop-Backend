@@ -468,105 +468,132 @@ public class EmailService {
                                                String courtName, String date, String slot,
                                                String reservationId) {
         log.info("Enviando términos y condiciones al jugador: {}", toEmail);
-        String content = """
-            %s
-            <h2 style="margin:0 0 8px; color:#1e293b; font-size:24px; font-weight:700;">
-                Términos y Condiciones 📋
+
+        String html = """
+            <h2 style="margin:0 0 4px; color:#1e293b; font-size:22px; font-weight:700;
+                       letter-spacing:-0.3px;">
+                Términos y Condiciones de Reserva
             </h2>
-            <p style="margin:0 0 20px; color:#64748b; font-size:15px; line-height:1.7;">
-                Hola <strong>%s</strong>, adjuntamos los términos y condiciones
-                de tu reserva en <strong>%s</strong>. Por favor léelos antes de asistir.
+            <p style="margin:0 0 6px; color:#94a3b8; font-size:11px;
+                      text-transform:uppercase; letter-spacing:1.5px; font-weight:600;">
+                Documento oficial — PlayStop © 2026
+            </p>
+            <hr style="border:none; border-top:1px solid #e2e8f0; margin:20px 0;" />
+
+            <p style="margin:0 0 20px; color:#475569; font-size:14px; line-height:1.8;">
+                Estimado/a <strong style="color:#1e293b;">%s</strong>,<br>
+                a continuación encontrará los términos y condiciones correspondientes
+                a su reserva en <strong style="color:#1e293b;">%s</strong>.
+                La asistencia a las instalaciones implica la aceptación de las presentes disposiciones.
             </p>
 
+            <!-- DATOS DE RESERVA -->
             <table width="100%%" cellpadding="0" cellspacing="0"
-                   style="border:1px solid #e2e8f0; border-radius:12px;
-                          overflow:hidden; margin-bottom:24px;">
-                %s
-                %s
-                %s
-                %s
+                   style="border:1px solid #cbd5e1; border-radius:8px;
+                          overflow:hidden; margin-bottom:24px; font-size:13px;">
+                <tr style="background:#f8fafc;">
+                    <td style="padding:10px 16px; border-bottom:1px solid #e2e8f0;
+                               color:#64748b; font-weight:600; width:40%%;">INSTALACIÓN</td>
+                    <td style="padding:10px 16px; border-bottom:1px solid #e2e8f0;
+                               color:#1e293b; font-weight:700;">%s</td>
+                </tr>
+                <tr>
+                    <td style="padding:10px 16px; border-bottom:1px solid #e2e8f0;
+                               color:#64748b; font-weight:600;">FECHA</td>
+                    <td style="padding:10px 16px; border-bottom:1px solid #e2e8f0;
+                               color:#1e293b;">%s</td>
+                </tr>
+                <tr style="background:#f8fafc;">
+                    <td style="padding:10px 16px; border-bottom:1px solid #e2e8f0;
+                               color:#64748b; font-weight:600;">HORARIO</td>
+                    <td style="padding:10px 16px; border-bottom:1px solid #e2e8f0;
+                               color:#1e293b;">%s</td>
+                </tr>
+                <tr>
+                    <td style="padding:10px 16px; color:#64748b; font-weight:600;">N° RESERVA</td>
+                    <td style="padding:10px 16px; color:#1e293b; font-family:monospace;">%s</td>
+                </tr>
             </table>
 
-            <!-- POLÍTICA DE CANCELACIÓN -->
-            <div style="background:#fff7ed; border:1px solid #fed7aa;
-                        border-radius:14px; padding:20px; margin-bottom:20px;">
-                <p style="margin:0 0 12px; color:#c2410c; font-size:14px;
-                           font-weight:800; letter-spacing:0.3px;">
-                    ⚠️ Política de Cancelación
-                </p>
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    %s
-                    %s
-                    %s
-                </div>
-            </div>
+            <!-- SECCIÓN 1 -->
+            <p style="margin:0 0 8px; color:#1e293b; font-size:13px; font-weight:700;
+                      text-transform:uppercase; letter-spacing:1px; border-left:3px solid #e94560;
+                      padding-left:10px;">
+                1. Política de Cancelación y Reembolso
+            </p>
+            <table width="100%%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+                <tr>
+                    <td style="padding:6px 0; color:#475569; font-size:13px; line-height:1.7;
+                               border-bottom:1px solid #f1f5f9; vertical-align:top;">
+                        <span style="color:#1e293b; font-weight:700; margin-right:8px;">1.1</span>
+                        El titular podrá cancelar su reserva sin cargo alguno con un mínimo de
+                        <strong>24 horas</strong> de anticipación a la fecha pactada.
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 0; color:#475569; font-size:13px; line-height:1.7;
+                               border-bottom:1px solid #f1f5f9; vertical-align:top;">
+                        <span style="color:#1e293b; font-weight:700; margin-right:8px;">1.2</span>
+                        Las cancelaciones realizadas con menos de 24 horas de anticipación
+                        <strong>no generan derecho a reembolso</strong>.
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 0; color:#475569; font-size:13px; line-height:1.7;
+                               vertical-align:top;">
+                        <span style="color:#1e293b; font-weight:700; margin-right:8px;">1.3</span>
+                        En caso de proceder el reembolso, este se acreditará en un plazo de
+                        <strong>3 a 5 días hábiles</strong>.
+                    </td>
+                </tr>
+            </table>
 
-            <!-- REGLAMENTO -->
-            <div style="background:#f8fafc; border:1px solid #e2e8f0;
-                        border-radius:14px; padding:20px; margin-bottom:20px;">
-                <p style="margin:0 0 14px; color:#1e293b; font-size:14px;
-                           font-weight:800; letter-spacing:0.3px;">
-                    📋 Reglamento de la Cancha
-                </p>
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    %s
-                    %s
-                    %s
-                    %s
-                    %s
-                    %s
-                    %s
-                </div>
-            </div>
+            <!-- SECCIÓN 2 -->
+            <p style="margin:0 0 8px; color:#1e293b; font-size:13px; font-weight:700;
+                      text-transform:uppercase; letter-spacing:1px; border-left:3px solid #e94560;
+                      padding-left:10px;">
+                2. Reglamento de Uso de Instalaciones
+            </p>
+            <table width="100%%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+                <tr><td style="padding:6px 0; color:#475569; font-size:13px; line-height:1.7; border-bottom:1px solid #f1f5f9; vertical-align:top;"><span style="color:#1e293b; font-weight:700; margin-right:8px;">2.1</span>Es obligatorio el uso de calzado deportivo adecuado para la superficie de la instalación.</td></tr>
+                <tr><td style="padding:6px 0; color:#475569; font-size:13px; line-height:1.7; border-bottom:1px solid #f1f5f9; vertical-align:top;"><span style="color:#1e293b; font-weight:700; margin-right:8px;">2.2</span>Queda estrictamente prohibido fumar o consumir bebidas alcohólicas dentro de las instalaciones.</td></tr>
+                <tr><td style="padding:6px 0; color:#475569; font-size:13px; line-height:1.7; border-bottom:1px solid #f1f5f9; vertical-align:top;"><span style="color:#1e293b; font-weight:700; margin-right:8px;">2.3</span>El usuario deberá mantener las instalaciones en condiciones de limpieza y orden durante su uso.</td></tr>
+                <tr><td style="padding:6px 0; color:#475569; font-size:13px; line-height:1.7; border-bottom:1px solid #f1f5f9; vertical-align:top;"><span style="color:#1e293b; font-weight:700; margin-right:8px;">2.4</span>El horario reservado deberá respetarse estrictamente. No se permitirán extensiones de tiempo no autorizadas.</td></tr>
+                <tr><td style="padding:6px 0; color:#475569; font-size:13px; line-height:1.7; border-bottom:1px solid #f1f5f9; vertical-align:top;"><span style="color:#1e293b; font-weight:700; margin-right:8px;">2.5</span>Se exige un trato respetuoso hacia los demás usuarios, árbitros y personal del establecimiento.</td></tr>
+                <tr><td style="padding:6px 0; color:#475569; font-size:13px; line-height:1.7; vertical-align:top;"><span style="color:#1e293b; font-weight:700; margin-right:8px;">2.6</span>Se permite el ingreso de bebidas no alcohólicas en envases cerrados.</td></tr>
+            </table>
 
-            <!-- RESPONSABILIDAD -->
-            <div style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);
-                        border:1px solid #bae6fd; border-radius:14px;
-                        padding:20px; margin-bottom:20px;">
-                <p style="margin:0 0 12px; color:#0369a1; font-size:14px;
-                           font-weight:800;">
-                    🛡️ Responsabilidad y Seguridad
-                </p>
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    %s
-                    %s
-                    %s
-                </div>
-            </div>
+            <!-- SECCIÓN 3 -->
+            <p style="margin:0 0 8px; color:#1e293b; font-size:13px; font-weight:700;
+                      text-transform:uppercase; letter-spacing:1px; border-left:3px solid #e94560;
+                      padding-left:10px;">
+                3. Limitación de Responsabilidad
+            </p>
+            <table width="100%%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr><td style="padding:6px 0; color:#475569; font-size:13px; line-height:1.7; border-bottom:1px solid #f1f5f9; vertical-align:top;"><span style="color:#1e293b; font-weight:700; margin-right:8px;">3.1</span>PlayStop y el propietario de la instalación no asumen responsabilidad por lesiones derivadas del uso inadecuado de las instalaciones o del incumplimiento del presente reglamento.</td></tr>
+                <tr><td style="padding:6px 0; color:#475569; font-size:13px; line-height:1.7; border-bottom:1px solid #f1f5f9; vertical-align:top;"><span style="color:#1e293b; font-weight:700; margin-right:8px;">3.2</span>El establecimiento no se responsabiliza por la pérdida, robo o daño de objetos personales dentro de las instalaciones.</td></tr>
+                <tr><td style="padding:6px 0; color:#475569; font-size:13px; line-height:1.7; vertical-align:top;"><span style="color:#1e293b; font-weight:700; margin-right:8px;">3.3</span>Ante cualquier emergencia, el usuario deberá notificar de inmediato al personal del establecimiento.</td></tr>
+            </table>
 
-            <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);
-                        border:1px solid #bbf7d0; border-radius:12px;
-                        padding:16px 20px; text-align:center;">
-                <p style="margin:0; color:#15803d; font-size:13px; font-weight:600;">
-                    ✅ Al asistir a la cancha confirmas que has leído y aceptas estos términos
-                </p>
-            </div>
-        """.formatted(
-            badge("#f59e0b", "📋 TÉRMINOS Y CONDICIONES"),
-            userName, courtName,
-            detailRow("🏟️", "CANCHA",        courtName),
-            detailRow("📅", "FECHA",          date),
-            detailRow("⏰", "HORARIO",        slot),
-            detailRow("🔖", "N° RESERVA",     "#" + reservationId),
-            // Política de cancelación
-            ruleRow("✅", "Puedes cancelar tu reserva con al menos <strong>24 horas</strong> de anticipación sin cargo."),
-            ruleRow("❌", "Cancelaciones con menos de 24 horas <strong>no tienen reembolso</strong>."),
-            ruleRow("🔄", "El reembolso, si aplica, se procesa en <strong>3 a 5 días hábiles</strong>."),
-            // Reglamento
-            ruleRow("👟", "Usa calzado deportivo apropiado para la superficie de la cancha."),
-            ruleRow("🚭", "Prohibido fumar o consumir alcohol en las instalaciones."),
-            ruleRow("🧹", "Mantén la cancha limpia — deposita los residuos en los tachos."),
-            ruleRow("⏱️", "Respeta estrictamente el horario reservado. No excedas tu tiempo."),
-            ruleRow("🤝", "Respeta a los demás jugadores, árbitros y al personal del local."),
-            ruleRow("💧", "Puedes traer bebidas en envases cerrados. Nada de bebidas alcohólicas."),
-            ruleRow("⚽", "No uses pelotas u objetos que puedan dañar la infraestructura."),
-            // Responsabilidad
-            ruleRow("🏥", "PlayStop y el propietario no se responsabilizan por lesiones derivadas del uso incorrecto de las instalaciones."),
-            ruleRow("🔒", "El propietario no se hace responsable por objetos de valor perdidos o robados en las instalaciones."),
-            ruleRow("📞", "En caso de emergencia comunícate de inmediato con el personal del local.")
-        );
+            <table width="100%%" cellpadding="0" cellspacing="0"
+                   style="background:#f8fafc; border:1px solid #cbd5e1;
+                          border-radius:8px; margin-bottom:8px;">
+                <tr>
+                    <td style="padding:16px 20px;">
+                        <p style="margin:0 0 4px; color:#1e293b; font-size:12px;
+                                  font-weight:700; text-transform:uppercase; letter-spacing:1px;">
+                            Declaración de Aceptación
+                        </p>
+                        <p style="margin:0; color:#475569; font-size:13px; line-height:1.7;">
+                            La asistencia a las instalaciones en la fecha y horario indicados constituye
+                            la aceptación plena e incondicional de los presentes Términos y Condiciones.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        """.formatted(userName, courtName, courtName, date, slot, reservationId);
 
-        sendHtmlEmail(toEmail, "📋 Términos y Condiciones de tu Reserva - PlayStop", buildEmail(content));
+        sendHtmlEmail(toEmail, "Terminos y Condiciones de su Reserva - PlayStop", buildEmail(html));
     }
 
     // ─── EMAIL: CANCELACIÓN ───────────────────────────────────────────────────
