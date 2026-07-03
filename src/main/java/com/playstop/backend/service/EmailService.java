@@ -25,8 +25,8 @@ public class EmailService {
     @Value("${app.mail.from}")
     private String fromEmail;
 
-    @Value("${RESEND_API_KEY:}")
-    private String resendApiKey;
+    @Value("${BREVO_API_KEY:}")
+    private String brevoApiKey;
 
     // ─── PLANTILLA BASE ───────────────────────────────────────────────────────
 
@@ -788,30 +788,30 @@ public class EmailService {
     // ─── MÉTODO INTERNO ───────────────────────────────────────────────────────
 
     private void sendHtmlEmailWithInlineImage(String to, String subject, String htmlBody, String imageBase64) {
-        log.info("Enviando email con imagen inline '{}' a: {}", subject, to);
+        log.info("Enviando email con QR inline '{}' a: {}", subject, to);
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(resendApiKey);
+            headers.set("api-key", brevoApiKey);
 
             Map<String, Object> attachment = new HashMap<>();
-            attachment.put("filename", "qr-reserva.png");
+            attachment.put("name", "qr-reserva.png");
             attachment.put("content", imageBase64);
-            attachment.put("content_id", "qrCode");
-            attachment.put("content_disposition", "inline");
+            attachment.put("contentId", "qrCode");
 
+            Map<String, String> sender = Map.of("name", "PlayStop", "email", fromEmail);
             Map<String, Object> body = new HashMap<>();
-            body.put("from", "PlayStop <" + fromEmail + ">");
-            body.put("to", List.of(to));
+            body.put("sender", sender);
+            body.put("to", List.of(Map.of("email", to)));
             body.put("subject", subject);
-            body.put("html", htmlBody);
-            body.put("attachments", List.of(attachment));
+            body.put("htmlContent", htmlBody);
+            body.put("attachment", List.of(attachment));
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-            restTemplate.postForEntity("https://api.resend.com/emails", entity, String.class);
-            log.info("Email con imagen inline enviado exitosamente a: {}", to);
+            restTemplate.postForEntity("https://api.brevo.com/v3/smtp/email", entity, String.class);
+            log.info("Email con QR enviado exitosamente a: {}", to);
         } catch (Exception e) {
-            log.error("Error al enviar email con imagen a {}: {}", to, e.getMessage(), e);
+            log.error("Error al enviar email con QR a {}: {}", to, e.getMessage(), e);
             throw new RuntimeException("Error al enviar email: " + e.getMessage());
         }
     }
@@ -821,16 +821,17 @@ public class EmailService {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(resendApiKey);
+            headers.set("api-key", brevoApiKey);
 
+            Map<String, String> sender = Map.of("name", "PlayStop", "email", fromEmail);
             Map<String, Object> body = new HashMap<>();
-            body.put("from", "PlayStop <" + fromEmail + ">");
-            body.put("to", List.of(to));
+            body.put("sender", sender);
+            body.put("to", List.of(Map.of("email", to)));
             body.put("subject", subject);
-            body.put("html", htmlBody);
+            body.put("htmlContent", htmlBody);
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-            restTemplate.postForEntity("https://api.resend.com/emails", entity, String.class);
+            restTemplate.postForEntity("https://api.brevo.com/v3/smtp/email", entity, String.class);
             log.info("Email enviado exitosamente a: {}", to);
         } catch (Exception e) {
             log.error("Error al enviar email a {}: {}", to, e.getMessage(), e);
