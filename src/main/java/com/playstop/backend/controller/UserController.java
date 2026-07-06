@@ -3,8 +3,10 @@ package com.playstop.backend.controller;
 import com.playstop.backend.dto.request.ChangePasswordRequest;
 import com.playstop.backend.dto.request.UpdateUserRequest;
 import com.playstop.backend.dto.response.UserProfileResponse;
+import com.playstop.backend.dto.response.UserSearchResponse;
 import com.playstop.backend.entity.User;
 import com.playstop.backend.repository.UserRepository;
+import com.playstop.backend.service.FriendService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,11 +23,19 @@ public class UserController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final FriendService friendService;
 
     @GetMapping("/me")
     public ResponseEntity<UserProfileResponse> getMe() {
         User user = getCurrentUser();
         return ResponseEntity.ok(toProfile(user));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<UserSearchResponse> searchByEmail(@RequestParam String email) {
+        return friendService.searchByEmail(email)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PatchMapping("/me")
