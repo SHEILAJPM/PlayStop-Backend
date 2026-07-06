@@ -25,7 +25,7 @@ public class PasswordResetService {
 
     @Transactional
     public void sendResetCode(ForgotPasswordRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(request.getEmail().trim())
                 .orElseThrow(() -> new RuntimeException("No existe una cuenta con ese email"));
 
         // Eliminar tokens anteriores del usuario
