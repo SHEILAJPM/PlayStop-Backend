@@ -216,24 +216,35 @@ public class ReservationService {
             throw new RuntimeException("La reserva ya está cancelada");
         }
 
-        LocalDateTime reservationDateTime = reservation.getDate()
-                .atTime(reservation.getSlotHour(), 0);
+        // Una reserva PENDING nunca se pagó ni se confirmó — no hay nada que
+        // proteger con la regla de 24h, y bloquearla dejaría reservas
+        // abandonadas (pago nunca completado) canceladas para siempre si su
+        // fecha ya pasó.
+        boolean wasConfirmed = reservation.getStatus() == ReservationStatus.CONFIRMED;
 
-        if (LocalDateTime.now().isAfter(reservationDateTime.minusHours(24))) {
-            throw new RuntimeException("Solo puedes cancelar hasta 24 horas antes de la reserva");
+        if (wasConfirmed) {
+            LocalDateTime reservationDateTime = reservation.getDate()
+                    .atTime(reservation.getSlotHour(), 0);
+
+            if (LocalDateTime.now().isAfter(reservationDateTime.minusHours(24))) {
+                throw new RuntimeException("Solo puedes cancelar hasta 24 horas antes de la reserva");
+            }
         }
 
         reservation.setStatus(ReservationStatus.CANCELLED);
         Reservation saved = reservationRepository.save(reservation);
 
-        // ✅ Email de cancelación
-        emailService.sendReservationCancellation(
-            user.getEmail(),
-            user.getName(),
-            reservation.getCourt().getName(),
-            reservation.getDate().toString(),
-            String.format("%02d:00 - %02d:00", reservation.getSlotHour(), reservation.getSlotHour() + reservation.getDurationHours())
-        );
+        // El email de cancelación solo aplica si la reserva llegó a confirmarse
+        // (si seguía PENDING, el propietario nunca fue notificado de ella).
+        if (wasConfirmed) {
+            emailService.sendReservationCancellation(
+                user.getEmail(),
+                user.getName(),
+                reservation.getCourt().getName(),
+                reservation.getDate().toString(),
+                String.format("%02d:00 - %02d:00", reservation.getSlotHour(), reservation.getSlotHour() + reservation.getDurationHours())
+            );
+        }
 
         return toResponse(saved);
     }
