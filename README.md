@@ -9,15 +9,32 @@ pagos, matchmaking, referidos y notificaciones para la plataforma PlayStop.
 
 | Componente | Tecnología |
 |------------|------------|
-| Framework | Spring Boot 4.0 / Java 17 |
+| Lenguaje | Java 17 |
+| Framework | Spring Boot 4.0 (Web, Security, Data JPA, Validation) |
 | Seguridad | Spring Security + JWT |
-| Persistencia | JPA + Hibernate + PostgreSQL |
+| Persistencia | Hibernate + PostgreSQL (Neon) |
 | Email | Brevo (API HTTP) |
-| Notificaciones | WhatsApp Business API |
-| Build | Maven Wrapper |
+| Pagos | Stripe (Checkout Sessions + Webhooks) |
+| Notificaciones | WhatsApp Business API (Twilio) + Firebase Cloud Messaging |
+| Imágenes | Cloudinary |
+| Build | Maven Wrapper (no requiere instalar Maven aparte) |
 | Deploy | Docker + Render |
 
-## Ejecución local
+## Requisitos previos
+
+- **Java 17** ([Temurin/Adoptium](https://adoptium.net/) o cualquier JDK 17)
+- **Git**
+- Una base de datos Postgres — puedes crear una gratis en [neon.tech](https://neon.tech)
+- Maven **no** hace falta instalarlo: el proyecto trae `mvnw`/`mvnw.cmd` (Maven Wrapper)
+
+## Cómo clonar y ejecutar en local
+
+```bash
+git clone https://github.com/SHEILAJPM/PlayStop-Backend.git
+cd PlayStop-Backend
+```
+
+Crea el archivo `src/main/resources/application-local.properties` (está en `.gitignore`, no se sube al repo) con al menos la base de datos y el JWT — ver la sección [Variables de entorno](#variables-de-entorno) más abajo para el resto.
 
 ```bash
 # Linux / Mac
@@ -27,7 +44,39 @@ pagos, matchmaking, referidos y notificaciones para la plataforma PlayStop.
 mvnw.cmd spring-boot:run
 ```
 
-Requiere un archivo `application-local.properties` con las credenciales de base de datos y servicios externos.
+Por defecto corre en `http://localhost:8080` con el perfil `local` (`spring.profiles.active` por defecto).
+
+## Variables de entorno
+
+En producción (Render) estas se configuran como **Environment Variables** del servicio. En local van en `application-local.properties` (formato `clave=valor`, sin el `${...}`).
+
+| Variable | Obligatoria | Para qué sirve | Dónde conseguirla |
+|---|---|---|---|
+| `DB_URL` | Sí | Cadena de conexión JDBC a Postgres | [neon.tech](https://neon.tech) → tu proyecto → *Connection string* (usa el formato `jdbc:postgresql://...`) |
+| `DB_USERNAME` | Sí | Usuario de la base de datos | Mismo panel de Neon |
+| `DB_PASSWORD` | Sí | Contraseña de la base de datos | Mismo panel de Neon |
+| `JWT_SECRET` | Sí | Clave para firmar los tokens de sesión | Invéntala tú: cualquier string aleatorio de 32+ caracteres |
+| `BREVO_API_KEY` | Para enviar emails | Envío de correos (bienvenida, códigos, confirmaciones) vía API HTTP | [brevo.com](https://www.brevo.com) → regístrate → verifica un correo remitente en **Senders & IP → Senders** → genera la key en **SMTP & API → API Keys** (la que empieza `xkeysib-`, **no** la de la pestaña "SMTP") |
+| `MAIL_FROM` | Para enviar emails | Correo remitente que aparece en los emails | Debe ser el mismo correo que verificaste como sender en Brevo |
+| `STRIPE_SECRET_KEY` | Para cobrar reservas | Autenticación server-to-server con Stripe | [dashboard.stripe.com](https://dashboard.stripe.com) (modo **prueba**, sin RUC ni URL para empezar) → **Desarrolladores → Claves API** → "Clave secreta" (`sk_test_...`) |
+| `STRIPE_WEBHOOK_SECRET` | Para cobrar reservas | Verifica que las notificaciones de pago vengan realmente de Stripe | Stripe → **Desarrolladores → Webhooks → Añadir endpoint**, URL: `<tu-backend>/api/payments/webhook`, eventos `checkout.session.completed` y `checkout.session.expired` → copia el "Signing secret" (`whsec_...`) |
+| `FRONTEND_URL` | No (tiene default) | A dónde redirige Stripe tras el pago | URL pública de tu frontend desplegado |
+| `APP_BASE_URL` | No (tiene default) | URL pública de este backend | La que te da Render al desplegar |
+| `PORT` | No (tiene default `8080`) | Puerto del servidor | — |
+| `UPLOAD_DIR` | No | Carpeta para archivos subidos | — |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | No | Notificaciones por WhatsApp | [twilio.com](https://www.twilio.com) → Console → Account Info |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | No | Subida/hosting de imágenes de canchas | [cloudinary.com](https://cloudinary.com) → Dashboard |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | No | Login con Google | [console.cloud.google.com](https://console.cloud.google.com) → Credenciales OAuth 2.0 |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | No | Notificaciones push (FCM) | Firebase Console → Configuración del proyecto → Cuentas de servicio → Generar clave privada (pegar el JSON completo como valor) |
+
+Ejemplo mínimo de `application-local.properties` para arrancar solo con base de datos (sin email ni pagos):
+
+```properties
+spring.datasource.url=jdbc:postgresql://tu-host.neon.tech/neondb?sslmode=require
+spring.datasource.username=tu_usuario
+spring.datasource.password=tu_password
+jwt.secret=cambia-esto-por-algo-aleatorio-de-32-caracteres-o-mas
+```
 
 ## Estructura de paquetes
 
@@ -40,6 +89,7 @@ com.playstop.backend/
 │   ├── ReservationController
 │   ├── ReviewController
 │   ├── UserController
+│   ├── PaymentController     # Checkout y webhook de Stripe
 │   ├── MatchSlotController   # Partidos abiertos (matchmaking)
 │   └── ReferralController    # Sistema de referidos
 ├── dto/
@@ -64,6 +114,7 @@ com.playstop.backend/
     ├── MatchSlotService      # Lógica de matchmaking
     ├── ReferralService       # Generación y aplicación de códigos
     ├── ReminderScheduler     # Recordatorios automáticos programados
+    ├── PaymentService        # Checkout Sessions y webhook de Stripe
     └── WhatsAppService       # Envío de notificaciones por WhatsApp
 ```
 
@@ -72,6 +123,7 @@ com.playstop.backend/
 - **Autenticación** — registro, login y recuperación de contraseña con JWT
 - **Canchas** — CRUD completo con fotos, horarios y disponibilidad en tiempo real
 - **Reservas** — creación, confirmación, cancelación y verificación por QR
+- **Pagos** — la reserva queda `PENDING` hasta que Stripe confirma el cobro (Checkout Session + webhook); recién ahí se envían las notificaciones
 - **Reseñas** — valoración con estrellas y comentario por reserva completada
 - **Matchmaking** — creación de partidos abiertos y gestión de participantes
 - **Referidos** — generación de código único, aplicación y registro de beneficios
@@ -85,8 +137,10 @@ com.playstop.backend/
 | POST | `/api/auth/register` | Registro de usuario |
 | POST | `/api/auth/login` | Inicio de sesión |
 | GET | `/api/courts` | Listar canchas con filtros |
-| POST | `/api/reservations` | Crear reserva |
+| POST | `/api/reservations` | Crear reserva (queda `PENDING`) |
 | GET | `/api/reservations/{id}/qr` | Obtener QR de reserva |
+| POST | `/api/payments/checkout/{reservationId}` | Crear sesión de pago de Stripe |
+| POST | `/api/payments/webhook` | Webhook de Stripe (confirma/cancela el pago) |
 | GET | `/api/matchslots` | Listar partidos abiertos |
 | POST | `/api/matchslots` | Crear partido abierto |
 | POST | `/api/referrals/apply` | Aplicar código de referido |
