@@ -26,6 +26,7 @@ public class Payment {
     private Reservation reservation;
 
     private String culqiChargeId;
+    private String stripeSessionId;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;

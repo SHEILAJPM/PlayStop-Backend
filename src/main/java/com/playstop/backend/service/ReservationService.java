@@ -80,6 +80,33 @@ public class ReservationService {
                 .build();
 
         Reservation saved = reservationRepository.save(reservation);
+
+        // La reserva queda PENDING hasta que el pago se confirme (ver
+        // confirmReservationPayment, invocado desde el webhook de Stripe).
+        // No se envían notificaciones ni se otorgan puntos todavía.
+
+        return toResponse(saved);
+    }
+
+    /**
+     * Invocado desde el webhook de Stripe cuando el pago se completa.
+     * Marca la reserva como CONFIRMED y recién ahí dispara notificaciones.
+     */
+    public void confirmReservationPayment(UUID reservationId) {
+        Reservation saved = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+
+        if (saved.getStatus() != ReservationStatus.PENDING) {
+            log.warn("Se intentó confirmar el pago de una reserva que no está PENDING: {} ({})",
+                    reservationId, saved.getStatus());
+            return;
+        }
+
+        saved.setStatus(ReservationStatus.CONFIRMED);
+        saved = reservationRepository.save(saved);
+
+        User user = saved.getUser();
+        Court court = saved.getCourt();
         gamificationService.onReservationCreated(user);
 
         String slot = String.format("%02d:00 - %02d:00", saved.getSlotHour(), saved.getSlotHour() + 1);
@@ -126,8 +153,20 @@ public class ReservationService {
             court.getName(), saved.getDate().toString(), slot,
             saved.getId().toString(), saved.getTotalAmount().doubleValue()
         );
+    }
 
-        return toResponse(saved);
+    /**
+     * Invocado desde el webhook de Stripe cuando la sesión de checkout expira
+     * sin completarse (el usuario abandonó el pago). Libera el horario.
+     */
+    public void cancelExpiredReservation(UUID reservationId) {
+        reservationRepository.findById(reservationId).ifPresent(r -> {
+            if (r.getStatus() == ReservationStatus.PENDING) {
+                r.setStatus(ReservationStatus.CANCELLED);
+                reservationRepository.save(r);
+                log.info("Reserva {} cancelada por expiración de la sesión de pago", reservationId);
+            }
+        });
     }
 
     public List<ReservationResponse> getMyReservations() {

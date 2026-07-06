@@ -42,6 +42,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                 // WebSocket SockJS handshake + info
                 .requestMatchers("/ws/**").permitAll()
+                // Stripe llama a este endpoint server-to-server, sin JWT
+                .requestMatchers(HttpMethod.POST, "/api/payments/webhook").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
