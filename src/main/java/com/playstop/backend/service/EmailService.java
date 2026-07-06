@@ -20,16 +20,17 @@ import java.util.Map;
 public class EmailService {
 
     // Render bloquea el tráfico SMTP saliente (puertos 25/465/587), por eso se usa
-    // la API HTTP de Resend (puerto 443) en vez de JavaMailSender.
-    private static final String RESEND_API_URL = "https://api.resend.com/emails";
+    // la API HTTP de Brevo (puerto 443) en vez de JavaMailSender. El remitente
+    // (app.mail.from) debe estar verificado como "Sender" en Brevo.
+    private static final String BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${app.mail.from}")
     private String fromEmail;
 
-    @Value("${resend.api-key}")
-    private String resendApiKey;
+    @Value("${brevo.api-key}")
+    private String brevoApiKey;
 
     // ─── PLANTILLA BASE ───────────────────────────────────────────────────────
 
@@ -191,6 +192,7 @@ public class EmailService {
                                                    String courtName, String date, String slot,
                                                    String reservationId, byte[] qrBytes) {
         log.info("Enviando email de confirmación con QR a: {}", toEmail);
+        String qrBase64 = Base64.getEncoder().encodeToString(qrBytes);
         String content = """
             %s
             <h2 style="margin:0 0 8px; color:#1e293b; font-size:24px; font-weight:700;">
@@ -219,7 +221,7 @@ public class EmailService {
                                   font-weight:700; text-transform:uppercase; letter-spacing:1px;">
                             Tu código de entrada
                         </p>
-                        <img src="cid:qrCode" alt="Código QR de reserva"
+                        <img src="data:image/png;base64,%s" alt="Código QR de reserva"
                              style="width:200px; height:200px; border-radius:12px;
                                     display:block; margin:0 auto;" />
                         <p style="margin:14px 0 0; color:#94a3b8; font-size:11px; font-family:monospace;">
@@ -243,11 +245,11 @@ public class EmailService {
             detailRow("📅", "FECHA", date),
             detailRow("⏰", "HORARIO", slot),
             detailRow("👤", "CLIENTE", userName),
+            qrBase64,
             reservationId
         );
 
-        String qrBase64 = Base64.getEncoder().encodeToString(qrBytes);
-        sendHtmlEmailWithInlineImage(toEmail, "✅ Reserva confirmada - PlayStop", buildEmail(content), qrBase64);
+        sendHtmlEmail(toEmail, "✅ Reserva confirmada - PlayStop", buildEmail(content));
     }
 
     // ─── EMAIL: CONFIRMACIÓN DE RESERVA (sin QR — fallback) ──────────────────
@@ -790,42 +792,25 @@ public class EmailService {
 
     // ─── MÉTODO INTERNO ───────────────────────────────────────────────────────
 
-    private void sendHtmlEmailWithInlineImage(String to, String subject, String htmlBody, String imageBase64) {
-        log.info("Enviando email con QR inline '{}' a: {}", subject, to);
-        Map<String, Object> attachment = Map.of(
-            "filename", "qr.png",
-            "content", imageBase64,
-            "content_type", "image/png",
-            "content_id", "qrCode"
-        );
-        Map<String, Object> payload = Map.of(
-            "from", "PlayStop <" + fromEmail + ">",
-            "to", List.of(to),
-            "subject", subject,
-            "html", htmlBody,
-            "attachments", List.of(attachment)
-        );
-        sendViaResend(to, subject, payload);
-    }
-
     private void sendHtmlEmail(String to, String subject, String htmlBody) {
         log.info("Enviando email '{}' a: {}", subject, to);
         Map<String, Object> payload = Map.of(
-            "from", "PlayStop <" + fromEmail + ">",
-            "to", List.of(to),
+            "sender", Map.of("name", "PlayStop", "email", fromEmail),
+            "to", List.of(Map.of("email", to)),
             "subject", subject,
-            "html", htmlBody
+            "htmlContent", htmlBody
         );
-        sendViaResend(to, subject, payload);
+        sendViaBrevo(to, subject, payload);
     }
 
-    private void sendViaResend(String to, String subject, Map<String, Object> payload) {
+    private void sendViaBrevo(String to, String subject, Map<String, Object> payload) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(resendApiKey);
+            headers.set("api-key", brevoApiKey);
+            headers.set("accept", "application/json");
 
-            restTemplate.postForEntity(RESEND_API_URL, new HttpEntity<>(payload, headers), String.class);
+            restTemplate.postForEntity(BREVO_API_URL, new HttpEntity<>(payload, headers), String.class);
             log.info("Email '{}' enviado exitosamente a: {}", subject, to);
         } catch (Exception e) {
             log.error("Error al enviar email a {}: {}", to, e.getMessage(), e);

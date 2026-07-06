@@ -12,7 +12,7 @@ pagos, matchmaking, referidos y notificaciones para la plataforma PlayStop.
 | Framework | Spring Boot 4.0 / Java 17 |
 | Seguridad | Spring Security + JWT |
 | Persistencia | JPA + Hibernate + PostgreSQL |
-| Email | Spring Mail + SMTP |
+| Email | Brevo (API HTTP) |
 | Notificaciones | WhatsApp Business API |
 | Build | Maven Wrapper |
 | Deploy | Docker + Render |
