@@ -65,7 +65,7 @@ public class PaymentService {
 
         BigDecimal amount = reservation.getTotalAmount();
         long unitAmountCents = amount.multiply(BigDecimal.valueOf(100)).longValueExact();
-        String slot = String.format("%02d:00 - %02d:00", reservation.getSlotHour(), reservation.getSlotHour() + 1);
+        String slot = String.format("%02d:00 - %02d:00", reservation.getSlotHour(), reservation.getSlotHour() + reservation.getDurationHours());
 
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)

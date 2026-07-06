@@ -18,7 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -124,12 +126,20 @@ public class CourtService {
         Court court = courtRepository.findById(courtId)
                 .orElseThrow(() -> new RuntimeException("Cancha no encontrada"));
 
-        List<Integer> occupiedSlots = reservationRepository
-                .findOccupiedSlots(court, date, ReservationStatus.CANCELLED);
+        // Cada reserva ocupa [slotHour, slotHour + durationHours), no solo su hora de inicio
+        List<Object[]> occupiedRanges = reservationRepository
+                .findOccupiedRanges(court, date, ReservationStatus.CANCELLED);
+
+        Set<Integer> occupiedHours = new HashSet<>();
+        for (Object[] range : occupiedRanges) {
+            int start = (int) range[0];
+            int duration = (int) range[1];
+            for (int h = start; h < start + duration; h++) occupiedHours.add(h);
+        }
 
         List<SlotResponse> slots = new ArrayList<>();
         for (int hour = 6; hour <= 23; hour++) {
-            boolean available = !occupiedSlots.contains(hour);
+            boolean available = !occupiedHours.contains(hour);
             String label = String.format("%02d:00 - %02d:00", hour, hour + 1);
             slots.add(new SlotResponse(hour, label, available));
         }

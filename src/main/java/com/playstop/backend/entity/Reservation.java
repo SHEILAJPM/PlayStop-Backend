@@ -39,6 +39,10 @@ public class Reservation {
     @Column(name = "slot_hour", nullable = false)
     private int slotHour;
 
+    @Builder.Default
+    @Column(name = "duration_hours", nullable = false)
+    private int durationHours = 1;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ReservationStatus status;

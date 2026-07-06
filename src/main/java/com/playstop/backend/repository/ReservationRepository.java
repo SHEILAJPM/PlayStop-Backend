@@ -18,11 +18,19 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
 
     List<Reservation> findByCourt(Court court);
 
-    @Query("SELECT r.slotHour FROM Reservation r WHERE r.court = :court AND r.date = :date AND r.status != :cancelled")
-    List<Integer> findOccupiedSlots(Court court, LocalDate date, ReservationStatus cancelled);
+    @Query("SELECT r.slotHour, r.durationHours FROM Reservation r WHERE r.court = :court AND r.date = :date AND r.status != :cancelled")
+    List<Object[]> findOccupiedRanges(Court court, LocalDate date, ReservationStatus cancelled);
 
-    boolean existsByCourtAndDateAndSlotHourAndStatusNot(
-        Court court, LocalDate date, int slotHour, ReservationStatus status
+    @Query("""
+        SELECT COUNT(r) > 0 FROM Reservation r
+        WHERE r.court = :court AND r.date = :date AND r.status <> :cancelled
+          AND r.slotHour < :endHour
+          AND (r.slotHour + r.durationHours) > :startHour
+        """)
+    boolean existsOverlapping(
+        @Param("court") Court court, @Param("date") LocalDate date,
+        @Param("startHour") int startHour, @Param("endHour") int endHour,
+        @Param("cancelled") ReservationStatus cancelled
     );
 
     // ✅ Nuevo — usado por ReminderScheduler

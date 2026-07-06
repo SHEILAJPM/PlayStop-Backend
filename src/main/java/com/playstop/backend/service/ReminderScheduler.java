@@ -30,7 +30,7 @@ public class ReminderScheduler {
                 .findByDateAndSlotHourAndStatus(today, targetHour, ReservationStatus.CONFIRMED);
 
         for (Reservation r : upcoming) {
-            String slot = r.getSlotHour() + ":00 - " + (r.getSlotHour() + 1) + ":00";
+            String slot = r.getSlotHour() + ":00 - " + (r.getSlotHour() + r.getDurationHours()) + ":00";
             emailService.sendReservationReminder(
                 r.getUser().getEmail(), r.getUser().getName(),
                 r.getCourt().getName(), r.getDate().toString(), slot

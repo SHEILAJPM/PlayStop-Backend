@@ -22,4 +22,8 @@ public class ReservationRequest {
     @Min(value = 6, message = "El slot mínimo es 6 (6AM)")
     @Max(value = 23, message = "El slot máximo es 23 (11PM)")
     private int slotHour;
+
+    @Min(value = 1, message = "La duración mínima es 1 hora")
+    @Max(value = 4, message = "La duración máxima es 4 horas")
+    private Integer durationHours = 1;
 }

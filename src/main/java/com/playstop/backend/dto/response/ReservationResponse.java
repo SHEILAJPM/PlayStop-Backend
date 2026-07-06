@@ -17,11 +17,14 @@ public class ReservationResponse {
     private String courtName;
     private String sportType;
     private String courtAddress;
+    private String courtCity;
+    private String courtDistrict;
     private Double courtLat;
     private Double courtLng;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate date;
     private int slotHour;
+    private int durationHours;
     private String slotLabel;
     private BigDecimal totalAmount;
     private ReservationStatus status;

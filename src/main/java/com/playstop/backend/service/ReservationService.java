@@ -62,11 +62,20 @@ public class ReservationService {
             throw new RuntimeException("La cancha no está disponible");
         }
 
-        boolean slotTaken = reservationRepository.existsByCourtAndDateAndSlotHourAndStatusNot(
-                court, request.getDate(), request.getSlotHour(), ReservationStatus.CANCELLED
+        int durationHours = request.getDurationHours() != null ? request.getDurationHours() : 1;
+        int startHour = request.getSlotHour();
+        int endHour = startHour + durationHours;
+
+        if (endHour > 24) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "La reserva no puede extenderse más allá de las 12 AM");
+        }
+
+        boolean overlapping = reservationRepository.existsOverlapping(
+                court, request.getDate(), startHour, endHour, ReservationStatus.CANCELLED
         );
 
-        if (slotTaken) {
+        if (overlapping) {
             throw new RuntimeException("Ese horario ya está reservado");
         }
 
@@ -74,8 +83,9 @@ public class ReservationService {
                 .user(user)
                 .court(court)
                 .date(request.getDate())
-                .slotHour(request.getSlotHour())
-                .totalAmount(court.getPricePerHour())
+                .slotHour(startHour)
+                .durationHours(durationHours)
+                .totalAmount(court.getPricePerHour().multiply(java.math.BigDecimal.valueOf(durationHours)))
                 .status(ReservationStatus.PENDING)
                 .build();
 
@@ -109,7 +119,7 @@ public class ReservationService {
         Court court = saved.getCourt();
         gamificationService.onReservationCreated(user);
 
-        String slot = String.format("%02d:00 - %02d:00", saved.getSlotHour(), saved.getSlotHour() + 1);
+        String slot = String.format("%02d:00 - %02d:00", saved.getSlotHour(), saved.getSlotHour() + saved.getDurationHours());
 
         // 1. Generar QR y enviarlo al jugador en el email de confirmación
         try {
@@ -222,7 +232,7 @@ public class ReservationService {
             user.getName(),
             reservation.getCourt().getName(),
             reservation.getDate().toString(),
-            String.format("%02d:00 - %02d:00", reservation.getSlotHour(), reservation.getSlotHour() + 1)
+            String.format("%02d:00 - %02d:00", reservation.getSlotHour(), reservation.getSlotHour() + reservation.getDurationHours())
         );
 
         return toResponse(saved);
@@ -250,7 +260,7 @@ public class ReservationService {
             reservation.getUser().getName(),
             reservation.getCourt().getName(),
             reservation.getDate().toString(),
-            String.format("%02d:00 - %02d:00", reservation.getSlotHour(), reservation.getSlotHour() + 1)
+            String.format("%02d:00 - %02d:00", reservation.getSlotHour(), reservation.getSlotHour() + reservation.getDurationHours())
         );
 
         return toResponse(saved);
@@ -277,7 +287,7 @@ public class ReservationService {
             throw new RuntimeException("No tienes permiso");
         }
 
-        String slot = String.format("%02d:00 - %02d:00", reservation.getSlotHour(), reservation.getSlotHour() + 1);
+        String slot = String.format("%02d:00 - %02d:00", reservation.getSlotHour(), reservation.getSlotHour() + reservation.getDurationHours());
         String qrContent = String.format(
             "PLAYSTOP|ID:%s|CANCHA:%s|FECHA:%s|HORA:%s|CLIENTE:%s|MONTO:S/ %.2f",
             reservation.getId(), reservation.getCourt().getName(),
@@ -324,7 +334,7 @@ public class ReservationService {
         Reservation saved = reservationRepository.save(reservation);
         gamificationService.onReservationAttended(reservation.getUser());
 
-        String slot = String.format("%02d:00 - %02d:00", reservation.getSlotHour(), reservation.getSlotHour() + 1);
+        String slot = String.format("%02d:00 - %02d:00", reservation.getSlotHour(), reservation.getSlotHour() + reservation.getDurationHours());
 
         emailService.sendAttendanceConfirmationToPlayer(
             reservation.getUser().getEmail(),
@@ -365,7 +375,7 @@ public class ReservationService {
             log.info("Reserva {} cancelada por ban permanente del usuario {}", r.getId(), userId);
 
             try {
-                String slot = String.format("%02d:00 - %02d:00", r.getSlotHour(), r.getSlotHour() + 1);
+                String slot = String.format("%02d:00 - %02d:00", r.getSlotHour(), r.getSlotHour() + r.getDurationHours());
                 emailService.sendReservationCancellation(
                     r.getUser().getEmail(),
                     r.getUser().getName(),
@@ -391,16 +401,19 @@ public class ReservationService {
     }
 
     private ReservationResponse toResponse(Reservation r) {
-        String slotLabel = String.format("%02d:00 - %02d:00", r.getSlotHour(), r.getSlotHour() + 1);
+        String slotLabel = String.format("%02d:00 - %02d:00", r.getSlotHour(), r.getSlotHour() + r.getDurationHours());
         return ReservationResponse.builder()
                 .id(r.getId())
                 .courtName(r.getCourt().getName())
                 .sportType(r.getCourt().getSportType())
                 .courtAddress(r.getCourt().getAddress())
+                .courtCity(r.getCourt().getCity())
+                .courtDistrict(r.getCourt().getDistrict())
                 .courtLat(r.getCourt().getLatitude())
                 .courtLng(r.getCourt().getLongitude())
                 .date(r.getDate())
                 .slotHour(r.getSlotHour())
+                .durationHours(r.getDurationHours())
                 .slotLabel(slotLabel)
                 .totalAmount(r.getTotalAmount())
                 .status(r.getStatus())

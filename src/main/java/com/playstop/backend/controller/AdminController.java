@@ -325,7 +325,7 @@ public class AdminController {
                 m.put("courtName",   r.getCourt().getName());
                 m.put("ownerName",   r.getCourt().getOwner().getName());
                 m.put("date",        r.getDate().toString());
-                m.put("slot",        String.format("%02d:00 - %02d:00", r.getSlotHour(), r.getSlotHour() + 1));
+                m.put("slot",        String.format("%02d:00 - %02d:00", r.getSlotHour(), r.getSlotHour() + r.getDurationHours()));
                 m.put("status",      r.getStatus().name());
                 m.put("amount",      r.getTotalAmount());
                 m.put("createdAt",   r.getCreatedAt().toString());
