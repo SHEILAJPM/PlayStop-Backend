@@ -1,26 +1,35 @@
 package com.playstop.backend.service;
 
-import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    // Render bloquea el tráfico SMTP saliente (puertos 25/465/587), por eso se usa
+    // la API HTTP de Resend (puerto 443) en vez de JavaMailSender.
+    private static final String RESEND_API_URL = "https://api.resend.com/emails";
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${app.mail.from}")
     private String fromEmail;
+
+    @Value("${resend.api-key}")
+    private String resendApiKey;
 
     // ─── PLANTILLA BASE ───────────────────────────────────────────────────────
 
@@ -783,35 +792,41 @@ public class EmailService {
 
     private void sendHtmlEmailWithInlineImage(String to, String subject, String htmlBody, String imageBase64) {
         log.info("Enviando email con QR inline '{}' a: {}", subject, to);
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(fromEmail, "PlayStop");
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(htmlBody, true);
-            helper.addInline("qrCode", new ByteArrayResource(Base64.getDecoder().decode(imageBase64)), "image/png");
-
-            mailSender.send(message);
-            log.info("Email con QR enviado exitosamente a: {}", to);
-        } catch (Exception e) {
-            log.error("Error al enviar email con QR a {}: {}", to, e.getMessage(), e);
-            throw new RuntimeException("Error al enviar email: " + e.getMessage());
-        }
+        Map<String, Object> attachment = Map.of(
+            "filename", "qr.png",
+            "content", imageBase64,
+            "content_type", "image/png",
+            "content_id", "qrCode"
+        );
+        Map<String, Object> payload = Map.of(
+            "from", "PlayStop <" + fromEmail + ">",
+            "to", List.of(to),
+            "subject", subject,
+            "html", htmlBody,
+            "attachments", List.of(attachment)
+        );
+        sendViaResend(to, subject, payload);
     }
 
     private void sendHtmlEmail(String to, String subject, String htmlBody) {
         log.info("Enviando email '{}' a: {}", subject, to);
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
-            helper.setFrom(fromEmail, "PlayStop");
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(htmlBody, true);
+        Map<String, Object> payload = Map.of(
+            "from", "PlayStop <" + fromEmail + ">",
+            "to", List.of(to),
+            "subject", subject,
+            "html", htmlBody
+        );
+        sendViaResend(to, subject, payload);
+    }
 
-            mailSender.send(message);
-            log.info("Email enviado exitosamente a: {}", to);
+    private void sendViaResend(String to, String subject, Map<String, Object> payload) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(resendApiKey);
+
+            restTemplate.postForEntity(RESEND_API_URL, new HttpEntity<>(payload, headers), String.class);
+            log.info("Email '{}' enviado exitosamente a: {}", subject, to);
         } catch (Exception e) {
             log.error("Error al enviar email a {}: {}", to, e.getMessage(), e);
             throw new RuntimeException("Error al enviar email: " + e.getMessage());
