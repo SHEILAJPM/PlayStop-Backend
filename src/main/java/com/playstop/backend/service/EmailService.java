@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Base64;
@@ -811,8 +812,8 @@ public class EmailService {
             restTemplate.postForEntity("https://api.brevo.com/v3/smtp/email", entity, String.class);
             log.info("Email con QR enviado exitosamente a: {}", to);
         } catch (Exception e) {
-            log.error("Error al enviar email con QR a {}: {}", to, e.getMessage(), e);
-            throw new RuntimeException("Error al enviar email: " + e.getMessage());
+            log.error("Error al enviar email con QR a {}: {}", to, describeError(e), e);
+            throw new RuntimeException("Error al enviar email: " + describeError(e));
         }
     }
 
@@ -834,8 +835,16 @@ public class EmailService {
             restTemplate.postForEntity("https://api.brevo.com/v3/smtp/email", entity, String.class);
             log.info("Email enviado exitosamente a: {}", to);
         } catch (Exception e) {
-            log.error("Error al enviar email a {}: {}", to, e.getMessage(), e);
-            throw new RuntimeException("Error al enviar email: " + e.getMessage());
+            log.error("Error al enviar email a {}: {}", to, describeError(e), e);
+            throw new RuntimeException("Error al enviar email: " + describeError(e));
         }
+    }
+
+    /** Incluye el cuerpo de la respuesta HTTP de Brevo (ej. "invalid api-key") en vez de solo el status genérico */
+    private String describeError(Exception e) {
+        if (e instanceof RestClientResponseException rcre) {
+            return rcre.getStatusCode() + " - " + rcre.getResponseBodyAsString();
+        }
+        return e.getMessage();
     }
 }
