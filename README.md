@@ -50,24 +50,32 @@ Por defecto corre en `http://localhost:8080` con el perfil `local` (`spring.prof
 
 En producción (Render) estas se configuran como **Environment Variables** del servicio. En local van en `application-local.properties` (formato `clave=valor`, sin el `${...}`).
 
-| Variable | Obligatoria | Para qué sirve | Dónde conseguirla |
-|---|---|---|---|
-| `DB_URL` | Sí | Cadena de conexión JDBC a Postgres | [neon.tech](https://neon.tech) → tu proyecto → *Connection string* (usa el formato `jdbc:postgresql://...`) |
-| `DB_USERNAME` | Sí | Usuario de la base de datos | Mismo panel de Neon |
-| `DB_PASSWORD` | Sí | Contraseña de la base de datos | Mismo panel de Neon |
-| `JWT_SECRET` | Sí | Clave para firmar los tokens de sesión | Invéntala tú: cualquier string aleatorio de 32+ caracteres |
-| `BREVO_API_KEY` | Para enviar emails | Envío de correos (bienvenida, códigos, confirmaciones) vía API HTTP | [brevo.com](https://www.brevo.com) → regístrate → verifica un correo remitente en **Senders & IP → Senders** → genera la key en **SMTP & API → API Keys** (la que empieza `xkeysib-`, **no** la de la pestaña "SMTP") |
-| `MAIL_FROM` | Para enviar emails | Correo remitente que aparece en los emails | Debe ser el mismo correo que verificaste como sender en Brevo |
-| `STRIPE_SECRET_KEY` | Para cobrar reservas | Autenticación server-to-server con Stripe | [dashboard.stripe.com](https://dashboard.stripe.com) (modo **prueba**, sin RUC ni URL para empezar) → **Desarrolladores → Claves API** → "Clave secreta" (`sk_test_...`) |
-| `STRIPE_WEBHOOK_SECRET` | Para cobrar reservas | Verifica que las notificaciones de pago vengan realmente de Stripe | Stripe → **Desarrolladores → Webhooks → Añadir endpoint**, URL: `<tu-backend>/api/payments/webhook`, eventos `checkout.session.completed` y `checkout.session.expired` → copia el "Signing secret" (`whsec_...`) |
-| `FRONTEND_URL` | No (tiene default) | A dónde redirige Stripe tras el pago | URL pública de tu frontend desplegado |
-| `APP_BASE_URL` | No (tiene default) | URL pública de este backend | La que te da Render al desplegar |
-| `PORT` | No (tiene default `8080`) | Puerto del servidor | — |
-| `UPLOAD_DIR` | No | Carpeta para archivos subidos | — |
-| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | No | Notificaciones por WhatsApp | [twilio.com](https://www.twilio.com) → Console → Account Info |
-| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | No | Subida/hosting de imágenes de canchas | [cloudinary.com](https://cloudinary.com) → Dashboard |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | No | Login con Google | [console.cloud.google.com](https://console.cloud.google.com) → Credenciales OAuth 2.0 |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | No | Notificaciones push (FCM) | Firebase Console → Configuración del proyecto → Cuentas de servicio → Generar clave privada (pegar el JSON completo como valor) |
+### Configuradas actualmente (las que ya tiene el proyecto en Render)
+
+| Variable | Para qué sirve | Dónde conseguirla |
+|---|---|---|
+| `DB_URL` | Cadena de conexión JDBC a Postgres | [neon.tech](https://neon.tech) → tu proyecto → *Connection string* (formato `jdbc:postgresql://...`) |
+| `DB_USERNAME` | Usuario de la base de datos | Mismo panel de Neon |
+| `DB_PASSWORD` | Contraseña de la base de datos | Mismo panel de Neon |
+| `JWT_SECRET` | Clave para firmar los tokens de sesión | Invéntala tú: cualquier string aleatorio de 32+ caracteres |
+| `BREVO_API_KEY` | Envío de correos (bienvenida, códigos, confirmaciones) vía API HTTP | [brevo.com](https://www.brevo.com) → regístrate → verifica un correo remitente en **Senders & IP → Senders** → genera la key en **SMTP & API → API Keys** (la que empieza `xkeysib-`, **no** la de la pestaña "SMTP") |
+| `MAIL_FROM` | Correo remitente que aparece en los emails | Debe ser el mismo correo que verificaste como sender en Brevo |
+| `STRIPE_SECRET_KEY` | Autenticación server-to-server con Stripe para cobrar reservas | [dashboard.stripe.com](https://dashboard.stripe.com) (modo **prueba**, sin RUC ni URL para empezar) → **Desarrolladores → Claves API** → "Clave secreta" (`sk_test_...`) |
+| `STRIPE_WEBHOOK_SECRET` | Verifica que las notificaciones de pago vengan realmente de Stripe | Stripe → **Desarrolladores → Webhooks → Añadir endpoint**, URL: `<tu-backend>/api/payments/webhook`, eventos `checkout.session.completed` y `checkout.session.expired` → copia el "Signing secret" (`whsec_...`) |
+| `SPRING_PROFILES_ACTIVE` | Perfil activo (`prod` en Render) | Se pone `prod` en Render; en local no hace falta, usa `local` por defecto |
+
+### Opcionales (features que aún no están activas — no hace falta configurarlas)
+
+| Variable | Para qué sirve | Dónde conseguirla |
+|---|---|---|
+| `FRONTEND_URL` | A dónde redirige Stripe tras el pago (ya trae un default correcto) | URL pública de tu frontend desplegado |
+| `APP_BASE_URL` | URL pública de este backend (ya trae un default correcto) | La que te da Render al desplegar |
+| `PORT` | Puerto del servidor (default `8080`) | — |
+| `UPLOAD_DIR` | Carpeta para archivos subidos | — |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Notificaciones por WhatsApp | [twilio.com](https://www.twilio.com) → Console → Account Info |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Subida/hosting de imágenes de canchas | [cloudinary.com](https://cloudinary.com) → Dashboard |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Login con Google | [console.cloud.google.com](https://console.cloud.google.com) → Credenciales OAuth 2.0 |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Notificaciones push (FCM) | Firebase Console → Configuración del proyecto → Cuentas de servicio → Generar clave privada (pegar el JSON completo como valor) |
 
 Ejemplo mínimo de `application-local.properties` para arrancar solo con base de datos (sin email ni pagos):
 
