@@ -78,9 +78,13 @@ public class User implements UserDetails {
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
         if (this.referralCode == null) {
-            this.referralCode = java.util.UUID.randomUUID().toString()
-                    .replace("-", "").substring(0, 8).toUpperCase();
+            this.referralCode = generateReferralCode();
         }
+    }
+
+    public static String generateReferralCode() {
+        return java.util.UUID.randomUUID().toString()
+                .replace("-", "").substring(0, 8).toUpperCase();
     }
 
     @Override

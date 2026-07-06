@@ -21,6 +21,10 @@ public class ReferralService {
 
     public Map<String, Object> getMyReferralInfo() {
         User user = getCurrentUser();
+        if (user.getReferralCode() == null) {
+            user.setReferralCode(User.generateReferralCode());
+            userRepository.save(user);
+        }
         long totalReferrals = referralRepository.countByReferrer(user);
         return Map.of(
                 "referralCode", user.getReferralCode(),
