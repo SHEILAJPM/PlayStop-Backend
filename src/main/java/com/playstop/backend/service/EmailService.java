@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -788,6 +789,64 @@ public class EmailService {
         );
 
         sendHtmlEmail(toEmail, "💬 Nuevo mensaje en PlayStop - " + courtName, buildEmail(content));
+    }
+
+    // ─── EMAIL: RETIRO PROCESADO ──────────────────────────────────────────────
+
+    @Async
+    public void sendPayoutPaid(String toEmail, String ownerName, BigDecimal amount) {
+        String content = """
+            %s
+            <h2 style="margin:0 0 8px; color:#1e293b; font-size:24px; font-weight:700;">
+                ¡Tu retiro fue procesado! 💸
+            </h2>
+            <p style="margin:0 0 28px; color:#64748b; font-size:15px; line-height:1.7;">
+                Hola <strong>%s</strong>, ya transferimos tu dinero según los datos que registraste.
+            </p>
+
+            <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);
+                        border:1px solid #bbf7d0; border-radius:16px;
+                        padding:24px; text-align:center;">
+                <p style="margin:0 0 4px; color:#15803d; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">
+                    Monto transferido
+                </p>
+                <p style="margin:0; color:#15803d; font-size:2rem; font-weight:900;">
+                    S/ %.2f
+                </p>
+            </div>
+        """.formatted(
+            badge("#22c55e", "✓ RETIRO COMPLETADO"),
+            ownerName, amount
+        );
+
+        sendHtmlEmail(toEmail, "💸 Tu retiro fue procesado - PlayStop", buildEmail(content));
+    }
+
+    @Async
+    public void sendPayoutRejected(String toEmail, String ownerName, BigDecimal amount, String reason) {
+        String content = """
+            %s
+            <h2 style="margin:0 0 8px; color:#1e293b; font-size:24px; font-weight:700;">
+                Tu solicitud de retiro fue rechazada
+            </h2>
+            <p style="margin:0 0 20px; color:#64748b; font-size:15px; line-height:1.7;">
+                Hola <strong>%s</strong>, tu solicitud de retiro por <strong>S/ %.2f</strong> no pudo procesarse.
+            </p>
+
+            <div style="background:#fef2f2; border:1px solid #fecaca;
+                        border-radius:12px; padding:16px 20px; margin-bottom:8px;">
+                <p style="margin:0 0 4px; color:#dc2626; font-size:12px; font-weight:700; text-transform:uppercase;">Motivo</p>
+                <p style="margin:0; color:#991b1b; font-size:14px;">%s</p>
+            </div>
+            <p style="margin:16px 0 0; color:#94a3b8; font-size:13px;">
+                El monto sigue disponible en tu saldo — puedes corregir los datos y solicitarlo de nuevo.
+            </p>
+        """.formatted(
+            badge("#ef4444", "RETIRO RECHAZADO"),
+            ownerName, amount, reason
+        );
+
+        sendHtmlEmail(toEmail, "Tu retiro fue rechazado - PlayStop", buildEmail(content));
     }
 
     // ─── MÉTODO INTERNO ───────────────────────────────────────────────────────
