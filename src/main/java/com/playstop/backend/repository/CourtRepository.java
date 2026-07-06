@@ -10,6 +10,7 @@ import java.util.UUID;
 
 public interface CourtRepository extends JpaRepository<Court, UUID> {
     List<Court> findByOwner(User owner);
+    long countByOwner(User owner);
     List<Court> findByActiveTrue();
     List<Court> findBySportTypeIgnoreCaseAndActiveTrue(String sportType);
     Optional<Court> findBySlug(String slug);

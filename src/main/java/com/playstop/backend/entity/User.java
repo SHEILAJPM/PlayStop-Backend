@@ -1,6 +1,7 @@
 package com.playstop.backend.entity;
 
 import com.playstop.backend.enums.Role;
+import com.playstop.backend.enums.SubscriptionPlan;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -73,6 +74,21 @@ public class User implements UserDetails {
 
     @Column(name = "chat_permanently_banned", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
     private boolean chatPermanentlyBanned;
+
+    // ── Suscripción (solo aplica a propietarios) ────────────────────────────
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SubscriptionPlan plan = SubscriptionPlan.BASICO;
+
+    @Column(name = "stripe_customer_id")
+    private String stripeCustomerId;
+
+    @Column(name = "stripe_subscription_id")
+    private String stripeSubscriptionId;
+
+    @Column(name = "plan_renews_at")
+    private LocalDateTime planRenewsAt;
 
     @PrePersist
     public void prePersist() {

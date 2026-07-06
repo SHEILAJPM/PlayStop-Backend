@@ -16,4 +16,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findByRole(Role role);
     long countByRole(Role role);
     List<User> findTop5ByRoleOrderByCreatedAtDesc(Role role);
+    Optional<User> findByStripeSubscriptionId(String stripeSubscriptionId);
 }

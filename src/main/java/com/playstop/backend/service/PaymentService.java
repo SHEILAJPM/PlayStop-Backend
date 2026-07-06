@@ -11,6 +11,7 @@ import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
 import com.stripe.model.EventDataObjectDeserializer;
+import com.stripe.model.Subscription;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 import com.stripe.param.checkout.SessionCreateParams;
@@ -37,6 +38,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final ReservationRepository reservationRepository;
     private final ReservationService reservationService;
+    private final SubscriptionService subscriptionService;
 
     @Value("${stripe.secret-key}")
     private String stripeSecretKey;
@@ -120,16 +122,32 @@ public class PaymentService {
         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
         if (deserializer.getObject().isEmpty()) return;
         Object stripeObject = deserializer.getObject().get();
-        if (!(stripeObject instanceof Session session)) return;
 
-        String reservationIdStr = session.getMetadata() != null ? session.getMetadata().get("reservationId") : null;
-        if (reservationIdStr == null) {
-            log.warn("Evento de Stripe {} sin reservationId en metadata", event.getType());
-            return;
+        if (stripeObject instanceof Session session) {
+            handleCheckoutSessionEvent(event.getType(), session);
+        } else if (stripeObject instanceof Subscription subscription) {
+            handleSubscriptionEvent(event.getType(), subscription);
         }
-        UUID reservationId = UUID.fromString(reservationIdStr);
+    }
 
-        switch (event.getType()) {
+    private void handleCheckoutSessionEvent(String eventType, Session session) {
+        var metadata = session.getMetadata();
+        String reservationIdStr = metadata != null ? metadata.get("reservationId") : null;
+        String ownerIdStr = metadata != null ? metadata.get("ownerId") : null;
+
+        if (reservationIdStr != null) {
+            handleReservationCheckoutEvent(eventType, session, UUID.fromString(reservationIdStr));
+        } else if (ownerIdStr != null) {
+            if ("checkout.session.completed".equals(eventType)) {
+                subscriptionService.handleCheckoutCompleted(session);
+            }
+        } else {
+            log.warn("Evento de Stripe {} sin reservationId ni ownerId en metadata", eventType);
+        }
+    }
+
+    private void handleReservationCheckoutEvent(String eventType, Session session, UUID reservationId) {
+        switch (eventType) {
             case "checkout.session.completed" -> {
                 paymentRepository.findByStripeSessionId(session.getId()).ifPresent(payment -> {
                     payment.setStatus(PaymentStatus.PAID);
@@ -147,6 +165,14 @@ public class PaymentService {
                 reservationService.cancelExpiredReservation(reservationId);
                 log.info("Sesión de pago expirada para reserva {}, reserva cancelada", reservationId);
             }
+            default -> { /* evento no manejado */ }
+        }
+    }
+
+    private void handleSubscriptionEvent(String eventType, Subscription subscription) {
+        switch (eventType) {
+            case "customer.subscription.updated" -> subscriptionService.handleSubscriptionUpdated(subscription);
+            case "customer.subscription.deleted" -> subscriptionService.handleSubscriptionDeleted(subscription);
             default -> { /* evento no manejado */ }
         }
     }

@@ -6,14 +6,17 @@ import com.playstop.backend.dto.response.SlotResponse;
 import com.playstop.backend.entity.Court;
 import com.playstop.backend.entity.User;
 import com.playstop.backend.enums.ReservationStatus;
+import com.playstop.backend.enums.SubscriptionPlan;
 import com.playstop.backend.repository.CourtRepository;
 import com.playstop.backend.repository.ReservationRepository;
 import com.playstop.backend.repository.ReviewRepository;
 import com.playstop.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.text.Normalizer;
 import java.time.LocalDate;
@@ -55,8 +58,17 @@ public class CourtService {
     }
 
     // Crear cancha (solo OWNER)
+    private static final int PLAN_BASICO_MAX_COURTS = 2;
+
     public CourtResponse createCourt(CourtRequest request) {
         User owner = getCurrentUser();
+
+        if (owner.getPlan() == SubscriptionPlan.BASICO
+                && courtRepository.countByOwner(owner) >= PLAN_BASICO_MAX_COURTS) {
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                "El Plan Básico permite hasta " + PLAN_BASICO_MAX_COURTS + " canchas. Actualiza a Pro para agregar más.");
+        }
+
         Court court = Court.builder()
                 .name(request.getName())
                 .sportType(request.getSportType())

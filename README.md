@@ -61,7 +61,9 @@ En producción (Render) estas se configuran como **Environment Variables** del s
 | `BREVO_API_KEY` | Envío de correos (bienvenida, códigos, confirmaciones) vía API HTTP | [brevo.com](https://www.brevo.com) → regístrate → verifica un correo remitente en **Senders & IP → Senders** → genera la key en **SMTP & API → API Keys** (la que empieza `xkeysib-`, **no** la de la pestaña "SMTP") |
 | `MAIL_FROM` | Correo remitente que aparece en los emails | Debe ser el mismo correo que verificaste como sender en Brevo |
 | `STRIPE_SECRET_KEY` | Autenticación server-to-server con Stripe para cobrar reservas | [dashboard.stripe.com](https://dashboard.stripe.com) (modo **prueba**, sin RUC ni URL para empezar) → **Desarrolladores → Claves API** → "Clave secreta" (`sk_test_...`) |
-| `STRIPE_WEBHOOK_SECRET` | Verifica que las notificaciones de pago vengan realmente de Stripe | Stripe → **Desarrolladores → Webhooks → Añadir endpoint**, URL: `<tu-backend>/api/payments/webhook`, eventos `checkout.session.completed` y `checkout.session.expired` → copia el "Signing secret" (`whsec_...`) |
+| `STRIPE_WEBHOOK_SECRET` | Verifica que las notificaciones de pago vengan realmente de Stripe | Stripe → **Desarrolladores → Webhooks → Añadir endpoint**, URL: `<tu-backend>/api/payments/webhook`, eventos `checkout.session.completed`, `checkout.session.expired`, `customer.subscription.updated` y `customer.subscription.deleted` → copia el "Signing secret" (`whsec_...`) |
+| `STRIPE_PRICE_PRO` | Precio recurrente del Plan Pro (S/ 99/mes) | Stripe → **Catálogo de productos → Añadir producto** "PlayStop Pro", precio recurrente mensual → copia el ID del precio (`price_...`) |
+| `STRIPE_PRICE_ENTERPRISE` | Precio recurrente del Plan Enterprise (S/ 199/mes) | Igual que el anterior, pero producto "PlayStop Enterprise" |
 | `SPRING_PROFILES_ACTIVE` | Perfil activo (`prod` en Render) | Se pone `prod` en Render; en local no hace falta, usa `local` por defecto |
 
 ### Opcionales (features que aún no están activas — no hace falta configurarlas)
