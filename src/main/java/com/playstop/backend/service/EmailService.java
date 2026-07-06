@@ -1,33 +1,26 @@
 package com.playstop.backend.service;
 
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientResponseException;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
-    private final RestTemplate restTemplate;
+    private final JavaMailSender mailSender;
 
     @Value("${app.mail.from}")
     private String fromEmail;
-
-    @Value("${BREVO_API_KEY:}")
-    private String brevoApiKey;
 
     // ─── PLANTILLA BASE ───────────────────────────────────────────────────────
 
@@ -791,60 +784,37 @@ public class EmailService {
     private void sendHtmlEmailWithInlineImage(String to, String subject, String htmlBody, String imageBase64) {
         log.info("Enviando email con QR inline '{}' a: {}", subject, to);
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("api-key", brevoApiKey);
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail, "PlayStop");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);
+            helper.addInline("qrCode", new ByteArrayResource(Base64.getDecoder().decode(imageBase64)), "image/png");
 
-            Map<String, Object> attachment = new HashMap<>();
-            attachment.put("name", "qr-reserva.png");
-            attachment.put("content", imageBase64);
-            attachment.put("contentId", "qrCode");
-
-            Map<String, String> sender = Map.of("name", "PlayStop", "email", fromEmail);
-            Map<String, Object> body = new HashMap<>();
-            body.put("sender", sender);
-            body.put("to", List.of(Map.of("email", to)));
-            body.put("subject", subject);
-            body.put("htmlContent", htmlBody);
-            body.put("attachment", List.of(attachment));
-
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-            restTemplate.postForEntity("https://api.brevo.com/v3/smtp/email", entity, String.class);
+            mailSender.send(message);
             log.info("Email con QR enviado exitosamente a: {}", to);
         } catch (Exception e) {
-            log.error("Error al enviar email con QR a {}: {}", to, describeError(e), e);
-            throw new RuntimeException("Error al enviar email: " + describeError(e));
+            log.error("Error al enviar email con QR a {}: {}", to, e.getMessage(), e);
+            throw new RuntimeException("Error al enviar email: " + e.getMessage());
         }
     }
 
     private void sendHtmlEmail(String to, String subject, String htmlBody) {
         log.info("Enviando email '{}' a: {}", subject, to);
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("api-key", brevoApiKey);
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(fromEmail, "PlayStop");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);
 
-            Map<String, String> sender = Map.of("name", "PlayStop", "email", fromEmail);
-            Map<String, Object> body = new HashMap<>();
-            body.put("sender", sender);
-            body.put("to", List.of(Map.of("email", to)));
-            body.put("subject", subject);
-            body.put("htmlContent", htmlBody);
-
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-            restTemplate.postForEntity("https://api.brevo.com/v3/smtp/email", entity, String.class);
+            mailSender.send(message);
             log.info("Email enviado exitosamente a: {}", to);
         } catch (Exception e) {
-            log.error("Error al enviar email a {}: {}", to, describeError(e), e);
-            throw new RuntimeException("Error al enviar email: " + describeError(e));
+            log.error("Error al enviar email a {}: {}", to, e.getMessage(), e);
+            throw new RuntimeException("Error al enviar email: " + e.getMessage());
         }
-    }
-
-    /** Incluye el cuerpo de la respuesta HTTP de Brevo (ej. "invalid api-key") en vez de solo el status genérico */
-    private String describeError(Exception e) {
-        if (e instanceof RestClientResponseException rcre) {
-            return rcre.getStatusCode() + " - " + rcre.getResponseBodyAsString();
-        }
-        return e.getMessage();
     }
 }
