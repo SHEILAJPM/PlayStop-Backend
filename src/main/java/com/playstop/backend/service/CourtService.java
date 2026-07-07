@@ -64,7 +64,7 @@ public class CourtService {
         User owner = getCurrentUser();
 
         if (owner.getPlan() == SubscriptionPlan.BASICO
-                && courtRepository.countByOwner(owner) >= PLAN_BASICO_MAX_COURTS) {
+                && courtRepository.countByOwnerAndActiveTrue(owner) >= PLAN_BASICO_MAX_COURTS) {
             throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
                 "El Plan Básico permite hasta " + PLAN_BASICO_MAX_COURTS + " canchas. Actualiza a Pro para agregar más.");
         }
@@ -127,7 +127,7 @@ public class CourtService {
     // Ver mis canchas (OWNER)
     public List<CourtResponse> getMyCourts() {
         User owner = getCurrentUser();
-        return courtRepository.findByOwner(owner)
+        return courtRepository.findByOwnerAndActiveTrue(owner)
                 .stream()
                 .map(this::toResponse)
                 .toList();
