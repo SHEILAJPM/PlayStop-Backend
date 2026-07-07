@@ -78,6 +78,7 @@ En producción (Render) estas se configuran como **Environment Variables** del s
 | `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Subida/hosting de imágenes de canchas | [cloudinary.com](https://cloudinary.com) → Dashboard |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Login con Google | [console.cloud.google.com](https://console.cloud.google.com) → Credenciales OAuth 2.0 |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Notificaciones push (FCM) | Firebase Console → Configuración del proyecto → Cuentas de servicio → Generar clave privada (pegar el JSON completo como valor) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Si una base de datos nueva no tiene ningún admin, `DataInitializer` crea uno con estos valores al primer arranque. Si no se configuran, simplemente no crea ninguno (no rompe el arranque) | Invéntalos tú — ya no hay ningún valor por defecto en el código |
 
 Ejemplo mínimo de `application-local.properties` para arrancar solo con base de datos (sin email ni pagos):
 
