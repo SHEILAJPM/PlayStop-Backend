@@ -8,6 +8,7 @@ import com.playstop.backend.dto.response.UserProfileResponse;
 import com.playstop.backend.dto.response.UserSearchResponse;
 import com.playstop.backend.entity.User;
 import com.playstop.backend.repository.UserRepository;
+import com.playstop.backend.security.JwtService;
 import com.playstop.backend.service.FriendService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class UserController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final FriendService friendService;
+    private final JwtService jwtService;
 
     @GetMapping("/me")
     public ResponseEntity<UserProfileResponse> getMe() {
@@ -73,8 +75,16 @@ public class UserController {
                     .body(Map.of("message", "La contraseña actual es incorrecta"));
         }
         user.setPassword(passwordEncoder.encode(request.nuevaContrasena()));
+        // Invalida cualquier token emitido antes de este cambio (ej. uno
+        // robado); se emite uno nuevo para que el usuario no quede
+        // deslogueado en su propia sesión actual.
+        user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
-        return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
+        String newToken = jwtService.generateToken(user);
+        return ResponseEntity.ok(Map.of(
+                "message", "Contraseña actualizada correctamente",
+                "token", newToken
+        ));
     }
 
     private User getCurrentUser() {

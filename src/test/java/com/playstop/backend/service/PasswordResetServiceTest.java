@@ -99,10 +99,12 @@ class PasswordResetServiceTest {
         request.setCode("123456");
         request.setNewPassword("nuevaClave123");
 
+        int versionBefore = owner.getTokenVersion();
         passwordResetService.resetPassword(request);
 
         assertEquals("hashed", owner.getPassword());
         assertEquals(true, token.isUsed());
+        assertEquals(versionBefore + 1, owner.getTokenVersion());
     }
 
     @Test

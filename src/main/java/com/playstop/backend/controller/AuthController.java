@@ -38,6 +38,13 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
+    // Invalida de inmediato todos los tokens ya emitidos para el usuario actual
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout() {
+        authService.logout();
+        return ResponseEntity.ok(Map.of("message", "Sesión cerrada"));
+    }
+
     @PostMapping("/google")
     public ResponseEntity<AuthResponse> loginWithGoogle(@RequestBody Map<String, String> body) {
         String idToken = body.get("idToken");

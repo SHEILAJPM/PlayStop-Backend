@@ -7,6 +7,7 @@ import com.playstop.backend.entity.User;
 import com.playstop.backend.enums.Role;
 import com.playstop.backend.repository.UserRepository;
 import com.playstop.backend.security.JwtService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +16,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -132,5 +135,23 @@ class AuthServiceTest {
 
         assertEquals("jwt-token", response.getToken());
         assertEquals("nuevo@test.com", response.getEmail());
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void logout_incrementsTokenVersion() {
+        User user = User.builder().email("nuevo@test.com").tokenVersion(3).build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("nuevo@test.com", null));
+        when(userRepository.findByEmail("nuevo@test.com")).thenReturn(Optional.of(user));
+
+        authService.logout();
+
+        assertEquals(4, user.getTokenVersion());
+        verify(userRepository).save(user);
     }
 }

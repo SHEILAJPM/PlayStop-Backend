@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -86,6 +87,19 @@ public class AuthService {
                 .role(user.getRole())
                 .bannedFromReservations(!user.isEnabled() || user.isChatPermanentlyBanned())
                 .build();
+    }
+
+    /**
+     * Sube el tokenVersion del usuario actual, invalidando de inmediato
+     * cualquier JWT emitido antes de esta llamada (todas las sesiones/
+     * dispositivos a la vez, no hay granularidad por dispositivo).
+     */
+    public void logout() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        userRepository.save(user);
     }
 
     @SuppressWarnings("unchecked")

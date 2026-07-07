@@ -1,5 +1,6 @@
 package com.playstop.backend.security;
 
+import com.playstop.backend.entity.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +37,9 @@ public class JwtService {
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+        if (userDetails instanceof User user) {
+            extraClaims.put("tv", user.getTokenVersion());
+        }
         return Jwts.builder()
                 .setClaims(extraClaims)
                 .setSubject(userDetails.getUsername())
@@ -45,9 +49,28 @@ public class JwtService {
                 .compact();
     }
 
+    /**
+     * Ademas de usuario y expiracion, valida que la cuenta siga habilitada y
+     * que el token no haya sido revocado (su "tv" coincide con el
+     * tokenVersion actual del usuario). Un token sin claim "tv" -emitido
+     * antes de este cambio- se trata como version 0, igual que el default de
+     * cualquier usuario existente, para no invalidar sesiones activas al
+     * desplegar esto.
+     */
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        if (!username.equals(userDetails.getUsername()) || isTokenExpired(token) || !userDetails.isEnabled()) {
+            return false;
+        }
+        if (userDetails instanceof User user) {
+            return extractTokenVersion(token) == user.getTokenVersion();
+        }
+        return true;
+    }
+
+    private int extractTokenVersion(String token) {
+        Integer tv = extractClaim(token, claims -> claims.get("tv", Integer.class));
+        return tv != null ? tv : 0;
     }
 
     private boolean isTokenExpired(String token) {

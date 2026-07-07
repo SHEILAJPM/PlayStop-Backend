@@ -68,6 +68,8 @@ public class PasswordResetService {
 
         User user = token.getUser();
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        // Invalida cualquier token emitido antes del reseteo (ej. uno robado)
+        user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
 
         // Marcar token como usado

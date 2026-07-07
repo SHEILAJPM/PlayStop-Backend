@@ -90,6 +90,13 @@ public class User implements UserDetails {
     @Column(name = "plan_renews_at")
     private LocalDateTime planRenewsAt;
 
+    // Se incrementa en logout y en cambio de contraseña; un JWT cuyo claim
+    // "tv" no coincida con este valor se trata como invalido, sin importar
+    // que no haya expirado todavia (ver JwtService).
+    @Builder.Default
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion = 0;
+
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
