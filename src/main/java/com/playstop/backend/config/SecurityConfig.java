@@ -67,7 +67,6 @@ public class SecurityConfig {
             "http://localhost:*",
             "https://localhost",
             "capacitor://localhost",
-            "https://*.onrender.com",
             "https://playstop-frontend.onrender.com"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

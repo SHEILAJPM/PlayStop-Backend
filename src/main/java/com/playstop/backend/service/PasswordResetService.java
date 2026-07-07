@@ -27,8 +27,10 @@ public class PasswordResetService {
 
     @Transactional
     public void sendResetCode(ForgotPasswordRequest request) {
-        User user = userRepository.findByEmailIgnoreCase(request.getEmail().trim())
-                .orElseThrow(() -> new BusinessException("No existe una cuenta con ese email"));
+        // No revela si el email existe o no: si no hay cuenta, simplemente no
+        // se genera código ni se envía correo, pero el endpoint responde igual.
+        User user = userRepository.findByEmailIgnoreCase(request.getEmail().trim()).orElse(null);
+        if (user == null) return;
 
         // Eliminar tokens anteriores del usuario
         tokenRepository.deleteByUser(user);
@@ -53,6 +55,12 @@ public class PasswordResetService {
     public void resetPassword(ResetPasswordRequest request) {
         PasswordResetToken token = tokenRepository.findByCodeAndUsedFalse(request.getCode())
                 .orElseThrow(() -> new BusinessException("Código inválido o ya utilizado"));
+
+        if (!token.getUser().getEmail().equalsIgnoreCase(request.getEmail().trim())) {
+            // Mismo mensaje genérico que "código inválido" — no revela que el
+            // código existe pero pertenece a otro usuario.
+            throw new BusinessException("Código inválido o ya utilizado");
+        }
 
         if (LocalDateTime.now().isAfter(token.getExpiresAt())) {
             throw new BusinessException("El código ha expirado, solicita uno nuevo");

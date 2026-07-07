@@ -28,7 +28,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private static final Set<String> LIMITED_PATHS = Set.of(
             "/api/auth/login",
             "/api/auth/register/player",
-            "/api/auth/register/owner"
+            "/api/auth/register/owner",
+            "/api/auth/forgot-password",
+            "/api/auth/reset-password"
     );
 
     private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
