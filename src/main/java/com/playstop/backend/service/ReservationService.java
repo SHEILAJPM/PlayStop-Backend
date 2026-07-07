@@ -1,5 +1,7 @@
 package com.playstop.backend.service;
 
+import com.playstop.backend.exception.BusinessException;
+
 import com.playstop.backend.dto.request.ReservationRequest;
 import com.playstop.backend.dto.response.ReservationResponse;
 import com.playstop.backend.entity.Court;
@@ -56,10 +58,10 @@ public class ReservationService {
         }
 
         Court court = courtRepository.findById(request.getCourtId())
-                .orElseThrow(() -> new RuntimeException("Cancha no encontrada"));
+                .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
 
         if (!court.isActive()) {
-            throw new RuntimeException("La cancha no está disponible");
+            throw new BusinessException("La cancha no está disponible");
         }
 
         int durationHours = request.getDurationHours() != null ? request.getDurationHours() : 1;
@@ -76,7 +78,7 @@ public class ReservationService {
         );
 
         if (overlapping) {
-            throw new RuntimeException("Ese horario ya está reservado");
+            throw new BusinessException("Ese horario ya está reservado");
         }
 
         Reservation reservation = Reservation.builder()
@@ -104,7 +106,7 @@ public class ReservationService {
      */
     public void confirmReservationPayment(UUID reservationId) {
         Reservation saved = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+                .orElseThrow(() -> new BusinessException("Reserva no encontrada"));
 
         if (saved.getStatus() != ReservationStatus.PENDING) {
             log.warn("Se intentó confirmar el pago de una reserva que no está PENDING: {} ({})",
@@ -189,11 +191,11 @@ public class ReservationService {
 
     public List<ReservationResponse> getReservationsByCourt(UUID courtId) {
         Court court = courtRepository.findById(courtId)
-                .orElseThrow(() -> new RuntimeException("Cancha no encontrada"));
+                .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
 
         User owner = getCurrentUser();
         if (!court.getOwner().getId().equals(owner.getId())) {
-            throw new RuntimeException("No tienes permiso para ver estas reservas");
+            throw new BusinessException("No tienes permiso para ver estas reservas");
         }
 
         return reservationRepository.findByCourt(court)
@@ -206,14 +208,14 @@ public class ReservationService {
         User user = getCurrentUser();
 
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+                .orElseThrow(() -> new BusinessException("Reserva no encontrada"));
 
         if (!reservation.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("No tienes permiso para cancelar esta reserva");
+            throw new BusinessException("No tienes permiso para cancelar esta reserva");
         }
 
         if (reservation.getStatus() == ReservationStatus.CANCELLED) {
-            throw new RuntimeException("La reserva ya está cancelada");
+            throw new BusinessException("La reserva ya está cancelada");
         }
 
         // Una reserva PENDING nunca se pagó ni se confirmó — no hay nada que
@@ -227,7 +229,7 @@ public class ReservationService {
                     .atTime(reservation.getSlotHour(), 0);
 
             if (LocalDateTime.now().isAfter(reservationDateTime.minusHours(24))) {
-                throw new RuntimeException("Solo puedes cancelar hasta 24 horas antes de la reserva");
+                throw new BusinessException("Solo puedes cancelar hasta 24 horas antes de la reserva");
             }
         }
 
@@ -253,14 +255,14 @@ public class ReservationService {
         User owner = getCurrentUser();
 
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+                .orElseThrow(() -> new BusinessException("Reserva no encontrada"));
 
         if (!reservation.getCourt().getOwner().getId().equals(owner.getId())) {
-            throw new RuntimeException("No tienes permiso para cancelar esta reserva");
+            throw new BusinessException("No tienes permiso para cancelar esta reserva");
         }
 
         if (reservation.getStatus() == ReservationStatus.CANCELLED) {
-            throw new RuntimeException("La reserva ya está cancelada");
+            throw new BusinessException("La reserva ya está cancelada");
         }
 
         reservation.setStatus(ReservationStatus.CANCELLED);
@@ -280,10 +282,10 @@ public class ReservationService {
     public ReservationResponse getReservationById(UUID id) {
         User user = getCurrentUser();
         Reservation reservation = reservationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+                .orElseThrow(() -> new BusinessException("Reserva no encontrada"));
 
         if (!reservation.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("No tienes permiso para ver esta reserva");
+            throw new BusinessException("No tienes permiso para ver esta reserva");
         }
 
         return toResponse(reservation);
@@ -292,10 +294,10 @@ public class ReservationService {
     public byte[] getReservationQr(UUID reservationId) {
         User user = getCurrentUser();
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+                .orElseThrow(() -> new BusinessException("Reserva no encontrada"));
 
         if (!reservation.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("No tienes permiso");
+            throw new BusinessException("No tienes permiso");
         }
 
         String slot = String.format("%02d:00 - %02d:00", reservation.getSlotHour(), reservation.getSlotHour() + reservation.getDurationHours());
@@ -308,17 +310,17 @@ public class ReservationService {
         try {
             return qrService.generateQr(qrContent);
         } catch (Exception e) {
-            throw new RuntimeException("Error generando QR: " + e.getMessage());
+            throw new BusinessException("Error generando QR: " + e.getMessage());
         }
     }
 
     public ReservationResponse verifyReservation(UUID reservationId) {
         User owner = getCurrentUser();
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+                .orElseThrow(() -> new BusinessException("Reserva no encontrada"));
 
         if (!reservation.getCourt().getOwner().getId().equals(owner.getId())) {
-            throw new RuntimeException("Esta reserva no pertenece a ninguna de tus canchas");
+            throw new BusinessException("Esta reserva no pertenece a ninguna de tus canchas");
         }
 
         return toResponse(reservation);
@@ -327,18 +329,18 @@ public class ReservationService {
     public ReservationResponse confirmAttendance(UUID reservationId) {
         User owner = getCurrentUser();
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+                .orElseThrow(() -> new BusinessException("Reserva no encontrada"));
 
         if (!reservation.getCourt().getOwner().getId().equals(owner.getId())) {
-            throw new RuntimeException("No tienes permiso para confirmar esta reserva");
+            throw new BusinessException("No tienes permiso para confirmar esta reserva");
         }
 
         if (reservation.getStatus() == ReservationStatus.CANCELLED) {
-            throw new RuntimeException("La reserva está cancelada");
+            throw new BusinessException("La reserva está cancelada");
         }
 
         if (reservation.getStatus() == ReservationStatus.ATTENDED) {
-            throw new RuntimeException("La asistencia ya fue confirmada anteriormente");
+            throw new BusinessException("La asistencia ya fue confirmada anteriormente");
         }
 
         reservation.setStatus(ReservationStatus.ATTENDED);
@@ -408,7 +410,7 @@ public class ReservationService {
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
     }
 
     private ReservationResponse toResponse(Reservation r) {

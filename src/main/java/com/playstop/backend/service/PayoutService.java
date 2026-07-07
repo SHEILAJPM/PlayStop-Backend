@@ -1,5 +1,7 @@
 package com.playstop.backend.service;
 
+import com.playstop.backend.exception.BusinessException;
+
 import com.playstop.backend.dto.request.PayoutRequestDto;
 import com.playstop.backend.dto.response.PayoutResponse;
 import com.playstop.backend.entity.PayoutRequest;
@@ -122,7 +124,7 @@ public class PayoutService {
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
     }
 
     private PayoutResponse toResponse(PayoutRequest r) {

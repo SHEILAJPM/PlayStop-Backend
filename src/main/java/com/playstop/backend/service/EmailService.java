@@ -1,5 +1,7 @@
 package com.playstop.backend.service;
 
+import com.playstop.backend.exception.BusinessException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -873,7 +875,7 @@ public class EmailService {
             log.info("Email '{}' enviado exitosamente a: {}", subject, to);
         } catch (Exception e) {
             log.error("Error al enviar email a {}: {}", to, e.getMessage(), e);
-            throw new RuntimeException("Error al enviar email: " + e.getMessage());
+            throw new BusinessException("Error al enviar email: " + e.getMessage());
         }
     }
 }

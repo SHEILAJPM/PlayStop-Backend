@@ -1,5 +1,7 @@
 package com.playstop.backend.service;
 
+import com.playstop.backend.exception.BusinessException;
+
 import com.playstop.backend.dto.request.MatchSlotRequest;
 import com.playstop.backend.dto.response.MatchSlotResponse;
 import com.playstop.backend.entity.Court;
@@ -38,7 +40,7 @@ public class MatchSlotService {
     public MatchSlotResponse createMatch(MatchSlotRequest request) {
         User organizer = getCurrentUser();
         Court court = courtRepository.findById(request.courtId())
-                .orElseThrow(() -> new RuntimeException("Cancha no encontrada"));
+                .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
 
         MatchSlot slot = MatchSlot.builder()
                 .court(court)
@@ -65,11 +67,11 @@ public class MatchSlotService {
     public MatchSlotResponse joinMatch(UUID matchId) {
         User user = getCurrentUser();
         MatchSlot slot = matchSlotRepository.findById(matchId)
-                .orElseThrow(() -> new RuntimeException("Partido no encontrado"));
+                .orElseThrow(() -> new BusinessException("Partido no encontrado"));
 
-        if (!slot.isOpen()) throw new RuntimeException("Este partido ya está lleno o cerrado");
+        if (!slot.isOpen()) throw new BusinessException("Este partido ya está lleno o cerrado");
         if (participantRepository.existsByMatchSlotAndUser(slot, user))
-            throw new RuntimeException("Ya te uniste a este partido");
+            throw new BusinessException("Ya te uniste a este partido");
 
         participantRepository.save(MatchSlotParticipant.builder()
                 .matchSlot(slot).user(user).build());
@@ -83,9 +85,9 @@ public class MatchSlotService {
     public void cancelMatch(UUID matchId) {
         User user = getCurrentUser();
         MatchSlot slot = matchSlotRepository.findById(matchId)
-                .orElseThrow(() -> new RuntimeException("Partido no encontrado"));
+                .orElseThrow(() -> new BusinessException("Partido no encontrado"));
         if (!slot.getOrganizer().getId().equals(user.getId()))
-            throw new RuntimeException("Solo el organizador puede cancelar el partido");
+            throw new BusinessException("Solo el organizador puede cancelar el partido");
         slot.setOpen(false);
         matchSlotRepository.save(slot);
     }
@@ -108,6 +110,6 @@ public class MatchSlotService {
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
     }
 }

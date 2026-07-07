@@ -1,5 +1,7 @@
 package com.playstop.backend.service;
 
+import com.playstop.backend.exception.BusinessException;
+
 import com.playstop.backend.dto.response.OwnerAnalyticsResponse;
 import com.playstop.backend.entity.User;
 import com.playstop.backend.repository.ReservationRepository;
@@ -22,7 +24,7 @@ public class AnalyticsService {
     public OwnerAnalyticsResponse getOwnerAnalytics() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User owner = userRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
 
         LocalDate since30 = LocalDate.now().minusDays(29);
         LocalDate since1m = LocalDate.now().withDayOfMonth(1);

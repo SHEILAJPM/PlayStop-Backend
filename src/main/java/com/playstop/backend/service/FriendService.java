@@ -1,5 +1,7 @@
 package com.playstop.backend.service;
 
+import com.playstop.backend.exception.BusinessException;
+
 import com.playstop.backend.dto.response.UserSearchResponse;
 import com.playstop.backend.entity.Friendship;
 import com.playstop.backend.entity.User;
@@ -40,11 +42,11 @@ public class FriendService {
         User currentUser = getCurrentUser();
 
         if (currentUser.getId().equals(targetUserId)) {
-            throw new RuntimeException("No puedes agregarte a ti mismo como amigo");
+            throw new BusinessException("No puedes agregarte a ti mismo como amigo");
         }
 
         User target = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
 
         if (friendshipRepository.existsByUserAndFriend(currentUser, target)) {
             return;
@@ -57,7 +59,7 @@ public class FriendService {
     public void removeFriend(UUID friendId) {
         User currentUser = getCurrentUser();
         User friend = userRepository.findById(friendId)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
         friendshipRepository.deleteByUserAndFriend(currentUser, friend);
         friendshipRepository.deleteByUserAndFriend(friend, currentUser);
     }
@@ -69,6 +71,6 @@ public class FriendService {
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
     }
 }

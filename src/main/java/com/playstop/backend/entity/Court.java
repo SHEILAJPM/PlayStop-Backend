@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "courts")
+@Table(name = "courts", indexes = @Index(name = "idx_courts_active", columnList = "active"))
 @Getter
 @Setter
 @NoArgsConstructor

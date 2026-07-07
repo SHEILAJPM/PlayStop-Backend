@@ -1,5 +1,7 @@
 package com.playstop.backend.service;
 
+import com.playstop.backend.exception.BusinessException;
+
 import com.playstop.backend.dto.request.CourtRequest;
 import com.playstop.backend.dto.response.CourtResponse;
 import com.playstop.backend.dto.response.SlotResponse;
@@ -38,7 +40,7 @@ public class CourtService {
 
     public CourtResponse getCourtBySlug(String slug) {
         Court court = courtRepository.findBySlug(slug)
-                .orElseThrow(() -> new RuntimeException("Cancha no encontrada"));
+                .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
         return toResponse(court);
     }
 
@@ -53,7 +55,7 @@ public class CourtService {
     // Obtener cancha por ID
     public CourtResponse getCourtById(UUID id) {
         Court court = courtRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cancha no encontrada"));
+                .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
         return toResponse(court);
     }
 
@@ -90,10 +92,10 @@ public class CourtService {
     public CourtResponse updateCourt(UUID id, CourtRequest request) {
         User owner = getCurrentUser();
         Court court = courtRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cancha no encontrada"));
+                .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
 
         if (!court.getOwner().getId().equals(owner.getId())) {
-            throw new RuntimeException("No tienes permiso para editar esta cancha");
+            throw new BusinessException("No tienes permiso para editar esta cancha");
         }
 
         court.setName(request.getName());
@@ -114,10 +116,10 @@ public class CourtService {
     public void deleteCourt(UUID id) {
         User owner = getCurrentUser();
         Court court = courtRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cancha no encontrada"));
+                .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
 
         if (!court.getOwner().getId().equals(owner.getId())) {
-            throw new RuntimeException("No tienes permiso para eliminar esta cancha");
+            throw new BusinessException("No tienes permiso para eliminar esta cancha");
         }
 
         court.setActive(false);
@@ -136,7 +138,7 @@ public class CourtService {
     // Ver slots disponibles de una cancha en una fecha
     public List<SlotResponse> getAvailableSlots(UUID courtId, LocalDate date) {
         Court court = courtRepository.findById(courtId)
-                .orElseThrow(() -> new RuntimeException("Cancha no encontrada"));
+                .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
 
         // Cada reserva ocupa [slotHour, slotHour + durationHours), no solo su hora de inicio
         List<Object[]> occupiedRanges = reservationRepository
@@ -185,7 +187,7 @@ public class CourtService {
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
     }
 
     private CourtResponse toResponse(Court court) {

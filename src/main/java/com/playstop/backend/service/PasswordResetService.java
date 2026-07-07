@@ -1,5 +1,7 @@
 package com.playstop.backend.service;
 
+import com.playstop.backend.exception.BusinessException;
+
 import com.playstop.backend.dto.request.ForgotPasswordRequest;
 import com.playstop.backend.dto.request.ResetPasswordRequest;
 import com.playstop.backend.entity.PasswordResetToken;
@@ -26,7 +28,7 @@ public class PasswordResetService {
     @Transactional
     public void sendResetCode(ForgotPasswordRequest request) {
         User user = userRepository.findByEmailIgnoreCase(request.getEmail().trim())
-                .orElseThrow(() -> new RuntimeException("No existe una cuenta con ese email"));
+                .orElseThrow(() -> new BusinessException("No existe una cuenta con ese email"));
 
         // Eliminar tokens anteriores del usuario
         tokenRepository.deleteByUser(user);
@@ -50,10 +52,10 @@ public class PasswordResetService {
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         PasswordResetToken token = tokenRepository.findByCodeAndUsedFalse(request.getCode())
-                .orElseThrow(() -> new RuntimeException("Código inválido o ya utilizado"));
+                .orElseThrow(() -> new BusinessException("Código inválido o ya utilizado"));
 
         if (LocalDateTime.now().isAfter(token.getExpiresAt())) {
-            throw new RuntimeException("El código ha expirado, solicita uno nuevo");
+            throw new BusinessException("El código ha expirado, solicita uno nuevo");
         }
 
         User user = token.getUser();

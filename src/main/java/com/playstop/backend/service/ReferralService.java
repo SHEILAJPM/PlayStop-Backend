@@ -1,5 +1,7 @@
 package com.playstop.backend.service;
 
+import com.playstop.backend.exception.BusinessException;
+
 import com.playstop.backend.entity.Referral;
 import com.playstop.backend.entity.User;
 import com.playstop.backend.repository.ReferralRepository;
@@ -37,14 +39,14 @@ public class ReferralService {
         User referred = getCurrentUser();
 
         if (referralRepository.existsByReferred(referred)) {
-            throw new RuntimeException("Ya usaste un código de referido");
+            throw new BusinessException("Ya usaste un código de referido");
         }
 
         User referrer = userRepository.findByReferralCode(code)
-                .orElseThrow(() -> new RuntimeException("Código de referido inválido"));
+                .orElseThrow(() -> new BusinessException("Código de referido inválido"));
 
         if (referrer.getId().equals(referred.getId())) {
-            throw new RuntimeException("No puedes usar tu propio código");
+            throw new BusinessException("No puedes usar tu propio código");
         }
 
         referralRepository.save(Referral.builder()
@@ -56,6 +58,6 @@ public class ReferralService {
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
     }
 }

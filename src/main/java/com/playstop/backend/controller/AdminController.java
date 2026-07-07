@@ -1,5 +1,7 @@
 package com.playstop.backend.controller;
 
+import com.playstop.backend.exception.BusinessException;
+
 import com.playstop.backend.entity.Court;
 import com.playstop.backend.entity.Reservation;
 import com.playstop.backend.entity.User;
@@ -169,7 +171,7 @@ public class AdminController {
     @PatchMapping("/users/{id}/lift-chat-ban")
     public ResponseEntity<Map<String, Object>> liftChatBan(@PathVariable UUID id) {
         User user = userRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
         user.setChatPermanentlyBanned(false);
         user.setChatSuspendedUntil(null);
         user.setChatWarningIssued(false);
@@ -207,7 +209,7 @@ public class AdminController {
     @PatchMapping("/users/{id}/toggle-status")
     public ResponseEntity<Map<String, Object>> toggleUserStatus(@PathVariable UUID id) {
         User user = userRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
         user.setEnabled(!user.isEnabled());
         userRepository.save(user);
         return ResponseEntity.ok(Map.of("id", user.getId().toString(), "enabled", user.isEnabled()));
@@ -217,7 +219,7 @@ public class AdminController {
     @Transactional
     public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
         User user = userRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
 
         if (user.getRole() == Role.OWNER) {
             // Desactivar canchas en lugar de eliminarlas (preserva historial)
@@ -263,7 +265,7 @@ public class AdminController {
     @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> getOwnerCourts(@PathVariable UUID id) {
         User owner = userRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Propietario no encontrado"));
+            .orElseThrow(() -> new BusinessException("Propietario no encontrado"));
         List<Map<String, Object>> result = courtRepository.findByOwner(owner).stream()
             .map(c -> {
                 Map<String, Object> m = new LinkedHashMap<>();
@@ -305,7 +307,7 @@ public class AdminController {
     @PatchMapping("/courts/{id}/toggle-status")
     public ResponseEntity<Map<String, Object>> toggleCourtStatus(@PathVariable UUID id) {
         Court court = courtRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Cancha no encontrada"));
+            .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
         court.setActive(!court.isActive());
         courtRepository.save(court);
         return ResponseEntity.ok(Map.of("id", court.getId().toString(), "active", court.isActive()));

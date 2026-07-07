@@ -1,5 +1,7 @@
 package com.playstop.backend.service;
 
+import com.playstop.backend.exception.BusinessException;
+
 import com.playstop.backend.dto.request.ReviewRequest;
 import com.playstop.backend.dto.response.ReviewResponse;
 import com.playstop.backend.entity.Court;
@@ -35,7 +37,7 @@ public class ReviewService {
 
     public List<ReviewResponse> getReviewsByCourt(UUID courtId) {
         Court court = courtRepository.findById(courtId)
-                .orElseThrow(() -> new RuntimeException("Cancha no encontrada"));
+                .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
         return reviewRepository.findByCourtOrderByCreatedAtDesc(court)
                 .stream()
                 .map(this::toResponse)
@@ -53,10 +55,10 @@ public class ReviewService {
     public ReviewResponse createReview(ReviewRequest request) {
         User user = getCurrentUser();
         Court court = courtRepository.findById(request.courtId())
-                .orElseThrow(() -> new RuntimeException("Cancha no encontrada"));
+                .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
 
         if (reviewRepository.existsByUserAndCourt(user, court)) {
-            throw new RuntimeException("Ya dejaste una reseña para esta cancha");
+            throw new BusinessException("Ya dejaste una reseña para esta cancha");
         }
 
         String photoUrlsStr = (request.photoUrls() != null && !request.photoUrls().isEmpty())
@@ -79,14 +81,14 @@ public class ReviewService {
     public void deleteReview(UUID reviewId) {
         User user = getCurrentUser();
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new RuntimeException("Reseña no encontrada"));
+                .orElseThrow(() -> new BusinessException("Reseña no encontrada"));
 
         boolean isOwner = review.getUser().getId().equals(user.getId());
         boolean isAdmin = user.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
         if (!isOwner && !isAdmin) {
-            throw new RuntimeException("No tienes permiso para eliminar esta reseña");
+            throw new BusinessException("No tienes permiso para eliminar esta reseña");
         }
 
         reviewRepository.delete(review);
@@ -95,7 +97,7 @@ public class ReviewService {
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
     }
 
     private ReviewResponse toResponse(Review review) {

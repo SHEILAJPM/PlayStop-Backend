@@ -1,5 +1,7 @@
 package com.playstop.backend.service;
 
+import com.playstop.backend.exception.BusinessException;
+
 import com.playstop.backend.dto.request.LoginRequest;
 import com.playstop.backend.dto.request.RegisterRequest;
 import com.playstop.backend.dto.response.AuthResponse;
@@ -72,7 +74,7 @@ public class AuthService {
         );
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
 
         String token = jwtService.generateToken(user);
 
@@ -97,11 +99,11 @@ public class AuthService {
                 Map.class
             );
         } catch (Exception e) {
-            throw new RuntimeException("Token de Google inválido");
+            throw new BusinessException("Token de Google inválido");
         }
 
         if (info == null || info.get("email") == null) {
-            throw new RuntimeException("No se pudo obtener el email de Google");
+            throw new BusinessException("No se pudo obtener el email de Google");
         }
 
         String email    = info.get("email");
