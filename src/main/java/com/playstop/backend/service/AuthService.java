@@ -10,6 +10,7 @@ import com.playstop.backend.enums.Role;
 import com.playstop.backend.repository.UserRepository;
 import com.playstop.backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -30,6 +31,15 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+
+    // Client ID de nuestra app registrada en Google. Un ID token es válido
+    // (firma correcta, no expirado) para cualquier app que use "Sign in with
+    // Google", no solo la nuestra: sin comparar el "aud" del token contra este
+    // valor, aceptaríamos también tokens emitidos para otras apps, lo que
+    // permite a un atacante iniciar sesión como cualquier víctima que haya
+    // hecho "Sign in with Google" en un sitio de terceros bajo su control.
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    private String googleClientId;
 
     public AuthResponse registerPlayer(RegisterRequest request) {
         return register(request, Role.USER);
@@ -118,6 +128,14 @@ public class AuthService {
 
         if (info == null || info.get("email") == null) {
             throw new BusinessException("No se pudo obtener el email de Google");
+        }
+
+        // Google firma el token para el "aud" (client id) de la app que lo
+        // solicitó, sea cual sea. Si no comparamos ese campo contra nuestro
+        // propio client id, aceptaríamos igual un token legítimo emitido para
+        // una app de un tercero.
+        if (googleClientId == null || googleClientId.isBlank() || !googleClientId.equals(info.get("aud"))) {
+            throw new BusinessException("Token de Google inválido");
         }
 
         String email    = info.get("email");

@@ -1,6 +1,7 @@
 package com.playstop.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -43,14 +44,17 @@ class SecurityIntegrationTest {
                 "phone", "999999999"
         );
 
-        String registerResponse = mockMvc.perform(post("/api/auth/register/player")
+        // El JWT nunca viaja en el JSON (AuthResponse.token es @JsonIgnore):
+        // solo como cookie httpOnly, ver JwtCookieService.
+        Cookie authCookie = mockMvc.perform(post("/api/auth/register/player")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerBody)))
                 .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+                .andReturn().getResponse().getCookie("playstop_token");
 
-        String token = objectMapper.readTree(registerResponse).get("token").asText();
-        assertThat(token).isNotBlank();
+        assertThat(authCookie).isNotNull();
+        assertThat(authCookie.getValue()).isNotBlank();
+        String token = authCookie.getValue();
 
         // Registrar de nuevo con el mismo email -> 409
         mockMvc.perform(post("/api/auth/register/player")
@@ -75,7 +79,13 @@ class SecurityIntegrationTest {
         mockMvc.perform(get("/api/reservations/my"))
                 .andExpect(status().isForbidden());
 
-        // Endpoint protegido con token válido (rol USER) -> 200
+        // Endpoint protegido con la cookie de sesión (flujo real del frontend
+        // web, rol USER) -> 200
+        mockMvc.perform(get("/api/reservations/my").cookie(authCookie))
+                .andExpect(status().isOk());
+
+        // También debe aceptar el mismo JWT por header Authorization (clientes
+        // que no manejan cookies, ver JwtAuthenticationFilter)
         mockMvc.perform(get("/api/reservations/my")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());

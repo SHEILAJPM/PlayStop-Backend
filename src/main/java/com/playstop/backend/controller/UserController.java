@@ -8,8 +8,10 @@ import com.playstop.backend.dto.response.UserProfileResponse;
 import com.playstop.backend.dto.response.UserSearchResponse;
 import com.playstop.backend.entity.User;
 import com.playstop.backend.repository.UserRepository;
+import com.playstop.backend.security.JwtCookieService;
 import com.playstop.backend.security.JwtService;
 import com.playstop.backend.service.FriendService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +30,7 @@ public class UserController {
     private final PasswordEncoder passwordEncoder;
     private final FriendService friendService;
     private final JwtService jwtService;
+    private final JwtCookieService jwtCookieService;
 
     @GetMapping("/me")
     public ResponseEntity<UserProfileResponse> getMe() {
@@ -64,7 +67,7 @@ public class UserController {
     }
 
     @PatchMapping("/me/password")
-    public ResponseEntity<Map<String, String>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<Map<String, String>> changePassword(@Valid @RequestBody ChangePasswordRequest request, HttpServletResponse response) {
         if (!request.nuevaContrasena().equals(request.confirmarContrasena())) {
             return ResponseEntity.badRequest()
                     .body(Map.of("message", "Las contraseñas no coinciden"));
@@ -81,10 +84,8 @@ public class UserController {
         user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
         String newToken = jwtService.generateToken(user);
-        return ResponseEntity.ok(Map.of(
-                "message", "Contraseña actualizada correctamente",
-                "token", newToken
-        ));
+        jwtCookieService.setAuthCookie(response, newToken);
+        return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
     }
 
     private User getCurrentUser() {

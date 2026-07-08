@@ -22,6 +22,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final JwtCookieService jwtCookieService;
 
     @Override
     protected void doFilterInternal(
@@ -30,14 +31,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @Nonnull FilterChain filterChain
     ) throws ServletException, IOException {
 
+        // El JWT llega por la cookie httpOnly (flujo normal del frontend web)
+        // o, como alternativa, por el header Authorization (herramientas de
+        // API/integraciones que no manejan cookies).
         final String authHeader = request.getHeader("Authorization");
+        final String jwt = (authHeader != null && authHeader.startsWith("Bearer "))
+                ? authHeader.substring(7)
+                : jwtCookieService.extractToken(request);
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (jwt == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        final String jwt = authHeader.substring(7);
         final String userEmail = jwtService.extractUsername(jwt);
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {

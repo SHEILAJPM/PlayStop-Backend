@@ -25,6 +25,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -42,6 +44,11 @@ public class SecurityConfig {
 
     @Value("${swagger.password:}")
     private String swaggerPassword;
+
+    // Origenes extra solo para desarrollo (localhost, capacitor://localhost).
+    // Vacio en produccion: ver application.properties vs application-local.properties.
+    @Value("${app.cors.dev-origins:}")
+    private String corsDevOrigins;
 
     /**
      * Cadena aparte, con mayor prioridad, solo para la documentacion de la
@@ -116,13 +123,13 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        List<String> origins = new ArrayList<>(List.of("https://playstop-frontend.onrender.com"));
+        if (!corsDevOrigins.isBlank()) {
+            origins.addAll(Arrays.stream(corsDevOrigins.split(",")).map(String::trim).toList());
+        }
+
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of(
-            "http://localhost:*",
-            "https://localhost",
-            "capacitor://localhost",
-            "https://playstop-frontend.onrender.com"
-        ));
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

@@ -7,7 +7,10 @@ RUN mvn clean package -DskipTests -q
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
+RUN addgroup -S app && adduser -S app -G app
 COPY --from=build /app/target/*.jar app.jar
+RUN chown app:app app.jar
+USER app
 EXPOSE 10000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD wget -qO- http://localhost:10000/actuator/health || exit 1
