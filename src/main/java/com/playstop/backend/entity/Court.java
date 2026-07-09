@@ -51,6 +51,12 @@ public class Court {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
+    // Nullable a propósito: canchas existentes (y canchas de owners fuera del
+    // plan Enterprise) no pertenecen a ninguna sucursal.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id")
+    private Branch branch;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

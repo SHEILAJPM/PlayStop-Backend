@@ -2,11 +2,14 @@ package com.playstop.backend.controller;
 
 import com.playstop.backend.dto.request.ForgotPasswordRequest;
 import com.playstop.backend.dto.request.LoginRequest;
+import com.playstop.backend.dto.request.RegisterEmployeeRequest;
 import com.playstop.backend.dto.request.RegisterRequest;
 import com.playstop.backend.dto.request.ResetPasswordRequest;
 import com.playstop.backend.dto.response.AuthResponse;
+import com.playstop.backend.dto.response.InvitationInfoResponse;
 import com.playstop.backend.security.JwtCookieService;
 import com.playstop.backend.service.AuthService;
+import com.playstop.backend.service.BranchService;
 import com.playstop.backend.service.PasswordResetService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -25,6 +28,7 @@ public class AuthController {
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
     private final JwtCookieService jwtCookieService;
+    private final BranchService branchService;
 
     @PostMapping("/register/player")
     public ResponseEntity<AuthResponse> registerPlayer(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
@@ -34,6 +38,18 @@ public class AuthController {
     @PostMapping("/register/owner")
     public ResponseEntity<AuthResponse> registerOwner(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
         return withAuthCookie(authService.registerOwner(request), response);
+    }
+
+    // Público (gateado por el token de invitación, no por sesión) — el
+    // empleado todavía no tiene cuenta cuando llega a esta pantalla.
+    @GetMapping("/invitations/{token}")
+    public ResponseEntity<InvitationInfoResponse> getInvitationInfo(@PathVariable String token) {
+        return ResponseEntity.ok(branchService.getInvitationInfo(token));
+    }
+
+    @PostMapping("/register/employee")
+    public ResponseEntity<AuthResponse> registerEmployee(@Valid @RequestBody RegisterEmployeeRequest request, HttpServletResponse response) {
+        return withAuthCookie(authService.registerEmployee(request), response);
     }
 
     @PostMapping("/login")

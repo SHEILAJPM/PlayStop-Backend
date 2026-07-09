@@ -36,6 +36,7 @@ public class ChatService {
     private final SimpMessagingTemplate messagingTemplate;
     private final EmailService emailService;
     private final ReservationService reservationService;
+    private final CourtAccessService courtAccessService;
 
     private static final int RATE_LIMIT = 10;
 
@@ -340,7 +341,7 @@ public class ChatService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reserva no encontrada"));
 
         boolean isPlayer = reservation.getUser().getId().equals(user.getId());
-        boolean isOwner  = reservation.getCourt().getOwner().getId().equals(user.getId());
+        boolean isOwner  = courtAccessService.canManageCourt(user, reservation.getCourt());
 
         if (!isPlayer && !isOwner) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,

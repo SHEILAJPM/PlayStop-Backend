@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 public class CourtRequest {
@@ -28,4 +29,7 @@ public class CourtRequest {
     private String imageUrl;
     private String city;
     private String district;
+
+    // Opcional — solo relevante para Owners en Plan Enterprise con sucursales creadas.
+    private UUID branchId;
 }

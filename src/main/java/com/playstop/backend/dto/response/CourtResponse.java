@@ -25,4 +25,6 @@ public class CourtResponse {
     private Double averageRating;
     private long reviewCount;
     private String slug;
+    private UUID branchId;
+    private String branchName;
 }

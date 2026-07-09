@@ -35,6 +35,9 @@ public class EmailService {
     @Value("${brevo.api-key}")
     private String brevoApiKey;
 
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
+
     // ─── PLANTILLA BASE ───────────────────────────────────────────────────────
 
     private String buildEmail(String content) {
@@ -849,6 +852,45 @@ public class EmailService {
         );
 
         sendHtmlEmail(toEmail, "Tu retiro fue rechazado - PlayStop", buildEmail(content));
+    }
+
+    // ─── EMAIL: INVITACIÓN A EMPLEADO DE SUCURSAL ────────────────────────────
+
+    @Async
+    public void sendBranchInvitation(String toEmail, String ownerName, String branchName, String token) {
+        log.info("Enviando invitación de empleado a: {}", toEmail);
+        String inviteUrl = frontendUrl + "/invitacion/" + token;
+        String content = """
+            %s
+            <h2 style="margin:0 0 8px; color:#1e293b; font-size:24px; font-weight:700;">
+                Te invitaron a unirte a PlayStop 🤝
+            </h2>
+            <p style="margin:0 0 28px; color:#64748b; font-size:15px; line-height:1.7;">
+                <strong>%s</strong> te invitó a formar parte del equipo de la sucursal
+                <strong>%s</strong> en PlayStop. Crea tu cuenta para empezar a gestionarla.
+            </p>
+
+            <div style="text-align:center; margin-bottom:28px;">
+                <a href="%s"
+                   style="display:inline-block; background:linear-gradient(135deg,#00d084,#00b875);
+                          color:#0f172a; font-size:15px; font-weight:700;
+                          padding:14px 32px; border-radius:12px;
+                          text-decoration:none; letter-spacing:0.5px;">
+                    Crear mi cuenta →
+                </a>
+            </div>
+
+            <p style="margin:0; color:#94a3b8; font-size:12px; text-align:center;">
+                Este enlace expira en 7 días. Si no esperabas esta invitación, ignora este correo.
+            </p>
+        """.formatted(
+            badge("#8b5cf6", "🤝 INVITACIÓN DE EQUIPO"),
+            ownerName,
+            branchName,
+            inviteUrl
+        );
+
+        sendHtmlEmail(toEmail, "🤝 Te invitaron a unirte a PlayStop - " + branchName, buildEmail(content));
     }
 
     // ─── MÉTODO INTERNO ───────────────────────────────────────────────────────

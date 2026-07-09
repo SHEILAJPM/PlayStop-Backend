@@ -39,6 +39,7 @@ public class ReservationService {
     private final EmailService emailService;
     private final QrService qrService;
     private final WhatsAppService whatsAppService;
+    private final CourtAccessService courtAccessService;
 
     @Lazy
     @Autowired
@@ -193,8 +194,8 @@ public class ReservationService {
         Court court = courtRepository.findById(courtId)
                 .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
 
-        User owner = getCurrentUser();
-        if (!court.getOwner().getId().equals(owner.getId())) {
+        User currentUser = getCurrentUser();
+        if (!courtAccessService.canManageCourt(currentUser, court)) {
             throw new BusinessException("No tienes permiso para ver estas reservas");
         }
 
@@ -252,12 +253,12 @@ public class ReservationService {
     }
 
     public ReservationResponse cancelReservationByOwner(UUID reservationId) {
-        User owner = getCurrentUser();
+        User currentUser = getCurrentUser();
 
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException("Reserva no encontrada"));
 
-        if (!reservation.getCourt().getOwner().getId().equals(owner.getId())) {
+        if (!courtAccessService.canManageCourt(currentUser, reservation.getCourt())) {
             throw new BusinessException("No tienes permiso para cancelar esta reserva");
         }
 
@@ -315,11 +316,11 @@ public class ReservationService {
     }
 
     public ReservationResponse verifyReservation(UUID reservationId) {
-        User owner = getCurrentUser();
+        User currentUser = getCurrentUser();
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException("Reserva no encontrada"));
 
-        if (!reservation.getCourt().getOwner().getId().equals(owner.getId())) {
+        if (!courtAccessService.canManageCourt(currentUser, reservation.getCourt())) {
             throw new BusinessException("Esta reserva no pertenece a ninguna de tus canchas");
         }
 
@@ -327,11 +328,11 @@ public class ReservationService {
     }
 
     public ReservationResponse confirmAttendance(UUID reservationId) {
-        User owner = getCurrentUser();
+        User currentUser = getCurrentUser();
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException("Reserva no encontrada"));
 
-        if (!reservation.getCourt().getOwner().getId().equals(owner.getId())) {
+        if (!courtAccessService.canManageCourt(currentUser, reservation.getCourt())) {
             throw new BusinessException("No tienes permiso para confirmar esta reserva");
         }
 

@@ -3,6 +3,7 @@ package com.playstop.backend.security;
 import com.playstop.backend.entity.Reservation;
 import com.playstop.backend.entity.User;
 import com.playstop.backend.repository.ReservationRepository;
+import com.playstop.backend.service.CourtAccessService;
 import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,7 @@ public class WsSubscriptionAuthorizationInterceptor implements ChannelIntercepto
     private static final Pattern NOTIFICATIONS = Pattern.compile("^/topic/notifications/([^/]+)$");
 
     private final ReservationRepository reservationRepository;
+    private final CourtAccessService courtAccessService;
 
     @Override
     public Message<?> preSend(@Nonnull Message<?> message, @Nonnull MessageChannel channel) {
@@ -85,7 +87,7 @@ public class WsSubscriptionAuthorizationInterceptor implements ChannelIntercepto
         if (reservation == null) return false;
 
         boolean isPlayer = reservation.getUser().getId().equals(user.getId());
-        boolean isOwner = reservation.getCourt().getOwner().getId().equals(user.getId());
+        boolean isOwner = courtAccessService.canManageCourt(user, reservation.getCourt());
         return isPlayer || isOwner;
     }
 

@@ -5,10 +5,15 @@ import com.playstop.backend.exception.BusinessException;
 import com.playstop.backend.dto.request.CourtRequest;
 import com.playstop.backend.dto.response.CourtResponse;
 import com.playstop.backend.dto.response.SlotResponse;
+import com.playstop.backend.entity.Branch;
+import com.playstop.backend.entity.BranchEmployee;
 import com.playstop.backend.entity.Court;
 import com.playstop.backend.entity.User;
 import com.playstop.backend.enums.ReservationStatus;
+import com.playstop.backend.enums.Role;
 import com.playstop.backend.enums.SubscriptionPlan;
+import com.playstop.backend.repository.BranchEmployeeRepository;
+import com.playstop.backend.repository.BranchRepository;
 import com.playstop.backend.repository.CourtRepository;
 import com.playstop.backend.repository.ReservationRepository;
 import com.playstop.backend.repository.ReviewRepository;
@@ -37,6 +42,9 @@ public class CourtService {
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
     private final ReviewRepository reviewRepository;
+    private final BranchRepository branchRepository;
+    private final BranchEmployeeRepository branchEmployeeRepository;
+    private final CourtAccessService courtAccessService;
 
     public CourtResponse getCourtBySlug(String slug) {
         Court court = courtRepository.findBySlug(slug)
@@ -63,7 +71,9 @@ public class CourtService {
     private static final int PLAN_BASICO_MAX_COURTS = 2;
 
     public CourtResponse createCourt(CourtRequest request) {
-        User owner = getCurrentUser();
+        User currentUser = getCurrentUser();
+        Branch branch = resolveBranchForWrite(currentUser, request.getBranchId());
+        User owner = branch != null ? branch.getOwner() : currentUser;
 
         if (owner.getPlan() == SubscriptionPlan.BASICO
                 && courtRepository.countByOwnerAndActiveTrue(owner) >= PLAN_BASICO_MAX_COURTS) {
@@ -83,18 +93,19 @@ public class CourtService {
                 .district(request.getDistrict())
                 .active(true)
                 .owner(owner)
+                .branch(branch)
                 .slug(generateUniqueSlug(request.getDistrict(), request.getName(), request.getSportType(), null))
                 .build();
         return toResponse(courtRepository.save(court));
     }
 
-    // Editar cancha (solo OWNER dueño de la cancha)
+    // Editar cancha (OWNER dueño de la cancha, o EMPLOYEE de su sucursal)
     public CourtResponse updateCourt(UUID id, CourtRequest request) {
-        User owner = getCurrentUser();
+        User currentUser = getCurrentUser();
         Court court = courtRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
 
-        if (!court.getOwner().getId().equals(owner.getId())) {
+        if (!courtAccessService.canManageCourt(currentUser, court)) {
             throw new BusinessException("No tienes permiso para editar esta cancha");
         }
 
@@ -107,18 +118,19 @@ public class CourtService {
         court.setImageUrl(request.getImageUrl());
         court.setCity(request.getCity());
         court.setDistrict(request.getDistrict());
+        court.setBranch(resolveBranchForWrite(currentUser, request.getBranchId()));
         court.setSlug(generateUniqueSlug(request.getDistrict(), request.getName(), request.getSportType(), court.getId()));
 
         return toResponse(courtRepository.save(court));
     }
 
-    // Eliminar cancha
+    // Eliminar cancha (OWNER dueño de la cancha, o EMPLOYEE de su sucursal)
     public void deleteCourt(UUID id) {
-        User owner = getCurrentUser();
+        User currentUser = getCurrentUser();
         Court court = courtRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Cancha no encontrada"));
 
-        if (!court.getOwner().getId().equals(owner.getId())) {
+        if (!courtAccessService.canManageCourt(currentUser, court)) {
             throw new BusinessException("No tienes permiso para eliminar esta cancha");
         }
 
@@ -126,13 +138,47 @@ public class CourtService {
         courtRepository.save(court);
     }
 
-    // Ver mis canchas (OWNER)
+    // Ver mis canchas (OWNER: todas las suyas; EMPLOYEE: solo las de su(s) sucursal(es))
     public List<CourtResponse> getMyCourts() {
-        User owner = getCurrentUser();
-        return courtRepository.findByOwnerAndActiveTrue(owner)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        User currentUser = getCurrentUser();
+
+        List<Court> courts;
+        if (currentUser.getRole() == Role.EMPLOYEE) {
+            List<Branch> branches = branchEmployeeRepository.findByEmployee(currentUser).stream()
+                    .map(BranchEmployee::getBranch)
+                    .distinct()
+                    .toList();
+            courts = branches.isEmpty() ? List.of() : courtRepository.findByBranchInAndActiveTrue(branches);
+        } else {
+            courts = courtRepository.findByOwnerAndActiveTrue(currentUser);
+        }
+
+        return courts.stream().map(this::toResponse).toList();
+    }
+
+    // Resuelve y valida la sucursal opcional de una cancha: un EMPLOYEE debe
+    // pertenecer a ella, un OWNER debe ser su dueño. null si no se especifica
+    // (cancha sin sucursal, ej. Owners fuera del plan Enterprise).
+    private Branch resolveBranchForWrite(User currentUser, UUID branchId) {
+        if (currentUser.getRole() == Role.EMPLOYEE) {
+            if (branchId == null) {
+                throw new BusinessException("Selecciona la sucursal para esta cancha");
+            }
+            Branch branch = branchRepository.findById(branchId)
+                    .orElseThrow(() -> new BusinessException("Sucursal no encontrada"));
+            if (!branchEmployeeRepository.existsByBranchAndEmployee(branch, currentUser)) {
+                throw new BusinessException("No tienes permiso sobre esta sucursal");
+            }
+            return branch;
+        }
+
+        if (branchId == null) return null;
+        Branch branch = branchRepository.findById(branchId)
+                .orElseThrow(() -> new BusinessException("Sucursal no encontrada"));
+        if (!branch.getOwner().getId().equals(currentUser.getId())) {
+            throw new BusinessException("No tienes permiso sobre esta sucursal");
+        }
+        return branch;
     }
 
     // Ver slots disponibles de una cancha en una fecha
@@ -210,6 +256,8 @@ public class CourtService {
                 .averageRating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : null)
                 .reviewCount(reviewCount)
                 .slug(court.getSlug())
+                .branchId(court.getBranch() != null ? court.getBranch().getId() : null)
+                .branchName(court.getBranch() != null ? court.getBranch().getName() : null)
                 .build();
     }
 }

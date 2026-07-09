@@ -46,14 +46,14 @@ public class ReservationController {
     }
 
     @GetMapping("/court/{courtId}")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('OWNER') or hasRole('EMPLOYEE')")
     public ResponseEntity<List<ReservationResponse>> getReservationsByCourt(
             @PathVariable UUID courtId) {
         return ResponseEntity.ok(reservationService.getReservationsByCourt(courtId));
     }
 
     @PatchMapping("/{id}/cancel-by-owner")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('OWNER') or hasRole('EMPLOYEE')")
     public ResponseEntity<ReservationResponse> cancelReservationByOwner(@PathVariable UUID id) {
         return ResponseEntity.ok(reservationService.cancelReservationByOwner(id));
     }
@@ -67,13 +67,13 @@ public class ReservationController {
     }
 
     @GetMapping("/verify/{id}")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('OWNER') or hasRole('EMPLOYEE')")
     public ResponseEntity<ReservationResponse> verifyReservation(@PathVariable UUID id) {
         return ResponseEntity.ok(reservationService.verifyReservation(id));
     }
 
     @PatchMapping("/{id}/confirm-attendance")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('OWNER') or hasRole('EMPLOYEE')")
     public ResponseEntity<ReservationResponse> confirmAttendance(@PathVariable UUID id) {
         return ResponseEntity.ok(reservationService.confirmAttendance(id));
     }

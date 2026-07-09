@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -89,7 +90,35 @@ public class SecurityConfig {
     @Order(2)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
+            // Token de doble envio: la cookie XSRF-TOKEN (legible por JS, a
+            // diferencia de la del JWT) debe volver como header X-XSRF-TOKEN
+            // en cada request que cambia estado. Se excluyen:
+            // - el webhook de Stripe (server-to-server, sin cookie)
+            // - /ws/** (SockJS usa polling XHR en algunos transportes, y la
+            //   sesion ya se valida por cookie en el handshake, ver
+            //   WsAuthHandshakeHandler)
+            // - /api/auth/** (login/registro/recuperar-contrasena): un
+            //   usuario nuevo puede aterrizar directo en /login sin haber
+            //   hecho ningun GET antes, por lo que su navegador aun no
+            //   tendria la cookie XSRF-TOKEN. No hay sesion existente que
+            //   proteger en estos endpoints, asi que el riesgo real de CSRF
+            //   no aplica aqui; si aplica en todo lo que ocurre despues de
+            //   iniciar sesion, que si queda protegido.
+            .csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                // Por defecto, Spring Security 6+ enmascara el token con XOR
+                // (proteccion BREACH) y espera que el cliente reenvie ese
+                // valor enmascarado, no el crudo de la cookie. Con el patron
+                // "leer cookie -> mandar como header" tipico de una SPA, el
+                // cliente reenvia el valor crudo, asi que hace falta el
+                // handler simple (sin XOR) para que la comparacion funcione.
+                .csrfTokenRequestHandler(new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler())
+                .ignoringRequestMatchers(
+                    org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/api/payments/webhook"),
+                    org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher.pathPattern("/ws/**"),
+                    org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher.pathPattern("/api/auth/**")
+                )
+            )
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/**").permitAll()
@@ -123,7 +152,12 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        List<String> origins = new ArrayList<>(List.of("https://playstop-frontend.onrender.com"));
+        // https://localhost es el origen que usa la app Android empaquetada con
+        // Capacitor (WebView con androidScheme=https por defecto), no un navegador.
+        List<String> origins = new ArrayList<>(List.of(
+            "https://playstop-frontend.onrender.com",
+            "https://localhost"
+        ));
         if (!corsDevOrigins.isBlank()) {
             origins.addAll(Arrays.stream(corsDevOrigins.split(",")).map(String::trim).toList());
         }

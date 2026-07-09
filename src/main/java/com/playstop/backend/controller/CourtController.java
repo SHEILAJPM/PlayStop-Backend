@@ -46,13 +46,13 @@ public class CourtController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('OWNER') or hasRole('EMPLOYEE')")
     public ResponseEntity<CourtResponse> createCourt(@Valid @RequestBody CourtRequest request) {
         return ResponseEntity.ok(courtService.createCourt(request));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('OWNER') or hasRole('EMPLOYEE')")
     public ResponseEntity<CourtResponse> updateCourt(
             @PathVariable UUID id,
             @Valid @RequestBody CourtRequest request
@@ -61,14 +61,14 @@ public class CourtController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('OWNER') or hasRole('EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<Void> deleteCourt(@PathVariable UUID id) {
         courtService.deleteCourt(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/my")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('OWNER') or hasRole('EMPLOYEE')")
     public ResponseEntity<List<CourtResponse>> getMyCourts() {
         return ResponseEntity.ok(courtService.getMyCourts());
     }

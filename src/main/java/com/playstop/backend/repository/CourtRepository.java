@@ -1,5 +1,6 @@
 package com.playstop.backend.repository;
 
+import com.playstop.backend.entity.Branch;
 import com.playstop.backend.entity.Court;
 import com.playstop.backend.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,4 +19,6 @@ public interface CourtRepository extends JpaRepository<Court, UUID> {
     Optional<Court> findBySlug(String slug);
     boolean existsBySlug(String slug);
     boolean existsBySlugAndIdNot(String slug, UUID id);
+    long countByBranchAndActiveTrue(Branch branch);
+    List<Court> findByBranchInAndActiveTrue(List<Branch> branches);
 }

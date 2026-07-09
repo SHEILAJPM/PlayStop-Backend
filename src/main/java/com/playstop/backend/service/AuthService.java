@@ -3,10 +3,15 @@ package com.playstop.backend.service;
 import com.playstop.backend.exception.BusinessException;
 
 import com.playstop.backend.dto.request.LoginRequest;
+import com.playstop.backend.dto.request.RegisterEmployeeRequest;
 import com.playstop.backend.dto.request.RegisterRequest;
 import com.playstop.backend.dto.response.AuthResponse;
+import com.playstop.backend.entity.BranchEmployee;
+import com.playstop.backend.entity.BranchInvitation;
 import com.playstop.backend.entity.User;
 import com.playstop.backend.enums.Role;
+import com.playstop.backend.repository.BranchEmployeeRepository;
+import com.playstop.backend.repository.BranchInvitationRepository;
 import com.playstop.backend.repository.UserRepository;
 import com.playstop.backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -17,9 +22,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Service
@@ -31,6 +38,8 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+    private final BranchInvitationRepository branchInvitationRepository;
+    private final BranchEmployeeRepository branchEmployeeRepository;
 
     // Client ID de nuestra app registrada en Google. Un ID token es válido
     // (firma correcta, no expirado) para cualquier app que use "Sign in with
@@ -76,6 +85,49 @@ public class AuthService {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .bannedFromReservations(!user.isEnabled() || user.isChatPermanentlyBanned())
+                .build();
+    }
+
+    @Transactional
+    public AuthResponse registerEmployee(RegisterEmployeeRequest request) {
+        BranchInvitation invitation = branchInvitationRepository.findByTokenAndUsedFalse(request.getToken())
+                .orElseThrow(() -> new BusinessException("Invitación inválida o ya utilizada"));
+
+        if (LocalDateTime.now().isAfter(invitation.getExpiresAt())) {
+            throw new BusinessException("La invitación ha expirado");
+        }
+
+        if (userRepository.existsByEmail(invitation.getEmail())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El email ya está registrado");
+        }
+
+        User employee = User.builder()
+                .name(request.getName())
+                .email(invitation.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .phone(request.getPhone())
+                .role(Role.EMPLOYEE)
+                .build();
+        userRepository.save(employee);
+
+        branchEmployeeRepository.save(BranchEmployee.builder()
+                .branch(invitation.getBranch())
+                .employee(employee)
+                .build());
+
+        invitation.setUsed(true);
+        branchInvitationRepository.save(invitation);
+
+        emailService.sendWelcomeEmail(employee.getEmail(), employee.getName());
+
+        String token = jwtService.generateToken(employee);
+        return AuthResponse.builder()
+                .id(employee.getId())
+                .token(token)
+                .name(employee.getName())
+                .email(employee.getEmail())
+                .role(employee.getRole())
+                .bannedFromReservations(false)
                 .build();
     }
 
