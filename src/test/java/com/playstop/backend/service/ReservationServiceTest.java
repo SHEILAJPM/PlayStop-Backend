@@ -44,6 +44,8 @@ class ReservationServiceTest {
     private WhatsAppService whatsAppService;
     @Mock
     private GamificationService gamificationService;
+    @Mock
+    private CourtAccessService courtAccessService;
 
     private ReservationService reservationService;
 
@@ -52,7 +54,7 @@ class ReservationServiceTest {
     @BeforeEach
     void setUp() {
         reservationService = new ReservationService(
-                reservationRepository, courtRepository, userRepository, emailService, qrService, whatsAppService);
+                reservationRepository, courtRepository, userRepository, emailService, qrService, whatsAppService, courtAccessService);
         ReflectionTestUtils.setField(reservationService, "gamificationService", gamificationService);
 
         User player = User.builder().id(UUID.randomUUID()).name("Jugador").email("jugador@test.com").phone("999999999").build();

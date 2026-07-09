@@ -5,6 +5,8 @@ import com.playstop.backend.dto.request.RegisterRequest;
 import com.playstop.backend.dto.response.AuthResponse;
 import com.playstop.backend.entity.User;
 import com.playstop.backend.enums.Role;
+import com.playstop.backend.repository.BranchEmployeeRepository;
+import com.playstop.backend.repository.BranchInvitationRepository;
 import com.playstop.backend.repository.UserRepository;
 import com.playstop.backend.security.JwtService;
 import org.junit.jupiter.api.AfterEach;
@@ -40,6 +42,10 @@ class AuthServiceTest {
     private AuthenticationManager authenticationManager;
     @Mock
     private EmailService emailService;
+    @Mock
+    private BranchInvitationRepository branchInvitationRepository;
+    @Mock
+    private BranchEmployeeRepository branchEmployeeRepository;
 
     private AuthService authService;
 
@@ -47,7 +53,7 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(userRepository, passwordEncoder, jwtService, authenticationManager, emailService);
+        authService = new AuthService(userRepository, passwordEncoder, jwtService, authenticationManager, emailService, branchInvitationRepository, branchEmployeeRepository);
 
         registerRequest = new RegisterRequest();
         registerRequest.setName("Jugador Nuevo");
