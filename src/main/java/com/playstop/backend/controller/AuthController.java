@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -77,6 +78,17 @@ public class AuthController {
     private ResponseEntity<AuthResponse> withAuthCookie(AuthResponse authResponse, HttpServletResponse response) {
         jwtCookieService.setAuthCookie(response, authResponse.getToken());
         return ResponseEntity.ok(authResponse);
+    }
+
+    // Frontend y backend viven en dominios distintos (onrender.com en
+    // subdominios separados), asi que el JS del frontend no puede leer la
+    // cookie XSRF-TOKEN con document.cookie (pertenece al dominio del
+    // backend). Este endpoint expone el mismo valor en el cuerpo JSON, que
+    // si es legible desde cualquier origen que haga la petición: el frontend
+    // lo cachea en memoria y lo reenvia como header X-XSRF-TOKEN.
+    @GetMapping("/csrf")
+    public Map<String, String> csrf(CsrfToken token) {
+        return Map.of("token", token.getToken());
     }
 
     // ✅ Solicitar código de recuperación

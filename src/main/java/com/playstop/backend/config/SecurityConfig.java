@@ -51,6 +51,16 @@ public class SecurityConfig {
     @Value("${app.cors.dev-origins:}")
     private String corsDevOrigins;
 
+    // Mismos flags que la cookie del JWT (ver JwtCookieService): frontend y
+    // backend viven en dominios distintos, asi que esta cookie tambien
+    // necesita SameSite=None + Secure para que el navegador la reenvie en
+    // requests cross-site.
+    @Value("${app.jwt.cookie.secure}")
+    private boolean cookieSecure;
+
+    @Value("${app.jwt.cookie.same-site}")
+    private String cookieSameSite;
+
     /**
      * Cadena aparte, con mayor prioridad, solo para la documentacion de la
      * API. Usa HTTP Basic con una credencial propia (no una cuenta real de
@@ -105,7 +115,7 @@ public class SecurityConfig {
             //   no aplica aqui; si aplica en todo lo que ocurre despues de
             //   iniciar sesion, que si queda protegido.
             .csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrfTokenRepository(csrfTokenRepository())
                 // Por defecto, Spring Security 6+ enmascara el token con XOR
                 // (proteccion BREACH) y espera que el cliente reenvie ese
                 // valor enmascarado, no el crudo de la cookie. Con el patron
@@ -148,6 +158,12 @@ public class SecurityConfig {
             .addFilterBefore(rateLimitingFilter, JwtAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    private CookieCsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieCustomizer(cookie -> cookie.secure(cookieSecure).sameSite(cookieSameSite));
+        return repository;
     }
 
     @Bean
