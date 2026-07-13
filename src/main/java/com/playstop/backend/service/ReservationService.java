@@ -152,7 +152,7 @@ public class ReservationService {
         );
         log.info("Email de términos y condiciones enviado al jugador: {}", user.getEmail());
 
-        // 3. WhatsApp (no-op si Twilio no está configurado)
+        // 3. WhatsApp (no-op si Meta Cloud API no está configurado)
         whatsAppService.sendReservationConfirmation(
             user.getPhone(), user.getName(), court.getName(),
             saved.getDate().toString(), slot,

@@ -1,37 +1,46 @@
 package com.playstop.backend.service;
 
-import com.twilio.Twilio;
-import com.twilio.rest.api.v2010.account.Message;
-import com.twilio.type.PhoneNumber;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.Map;
+
 @Slf4j
 @Service
 public class WhatsAppService {
 
-    @Value("${twilio.account.sid:}")
-    private String accountSid;
+    @Value("${whatsapp.cloud.token:}")
+    private String accessToken;
 
-    @Value("${twilio.auth.token:}")
-    private String authToken;
+    @Value("${whatsapp.cloud.phone-number-id:}")
+    private String phoneNumberId;
 
-    @Value("${twilio.whatsapp.from:whatsapp:+14155238886}")
-    private String fromNumber;
+    @Value("${whatsapp.cloud.api-version:v23.0}")
+    private String apiVersion;
+
+    private final HttpClient http = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+    private final ObjectMapper mapper = new ObjectMapper();
 
     private boolean enabled = false;
 
     @PostConstruct
     public void init() {
-        if (accountSid != null && !accountSid.isBlank() &&
-            authToken  != null && !authToken.isBlank()) {
-            Twilio.init(accountSid, authToken);
+        if (accessToken != null && !accessToken.isBlank() &&
+            phoneNumberId != null && !phoneNumberId.isBlank()) {
             enabled = true;
-            log.info("WhatsApp service initialized via Twilio");
+            log.info("WhatsApp service initialized via Meta Cloud API");
         } else {
-            log.info("WhatsApp service disabled: TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN not set");
+            log.info("WhatsApp service disabled: WHATSAPP_CLOUD_TOKEN / WHATSAPP_PHONE_NUMBER_ID not set");
         }
     }
 
@@ -64,8 +73,25 @@ public class WhatsAppService {
 
     private void send(String phone, String body) {
         try {
-            String to = phone.startsWith("whatsapp:") ? phone : "whatsapp:+" + phone.replaceAll("[^0-9]", "");
-            Message.creator(new PhoneNumber(to), new PhoneNumber(fromNumber), body).create();
+            String to = phone.replaceAll("[^0-9]", "");
+            Map<String, Object> payload = Map.of(
+                "messaging_product", "whatsapp",
+                "to", to,
+                "type", "text",
+                "text", Map.of("body", body)
+            );
+
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://graph.facebook.com/" + apiVersion + "/" + phoneNumberId + "/messages"))
+                .header("Authorization", "Bearer " + accessToken)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(payload)))
+                .build();
+
+            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 300) {
+                log.warn("WhatsApp send failed for {}: HTTP {} - {}", phone, response.statusCode(), response.body());
+            }
         } catch (Exception e) {
             log.warn("WhatsApp send failed for {}: {}", phone, e.getMessage());
         }
