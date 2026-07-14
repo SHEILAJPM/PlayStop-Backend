@@ -206,7 +206,7 @@ public class BranchService {
                 .district(branch.getDistrict())
                 .active(branch.isActive())
                 .courtCount(courtRepository.countByBranchAndActiveTrue(branch))
-                .employeeCount(branchEmployeeRepository.findByBranch(branch).size())
+                .employeeCount(branchEmployeeRepository.countByBranch(branch))
                 .build();
     }
 }

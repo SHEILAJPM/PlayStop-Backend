@@ -244,10 +244,13 @@ public class AdminController {
 
     @GetMapping("/owners")
     public ResponseEntity<List<Map<String, Object>>> getAllOwners() {
+        Map<UUID, Long> courtCountsByOwner = courtRepository.countGroupedByOwner().stream()
+            .collect(Collectors.toMap(row -> (UUID) row[0], row -> (Long) row[1]));
+
         List<Map<String, Object>> result = userRepository.findByRole(Role.OWNER).stream()
             .filter(o -> !o.getEmail().endsWith("@playstop.internal"))
             .map(o -> {
-                long courts = courtRepository.findByOwner(o).size();
+                long courts = courtCountsByOwner.getOrDefault(o.getId(), 0L);
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("id",        o.getId().toString());
                 m.put("name",      o.getName());

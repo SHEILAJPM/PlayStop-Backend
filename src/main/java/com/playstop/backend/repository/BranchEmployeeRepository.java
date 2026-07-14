@@ -16,6 +16,8 @@ public interface BranchEmployeeRepository extends JpaRepository<BranchEmployee, 
     @Query("SELECT be FROM BranchEmployee be JOIN FETCH be.employee WHERE be.branch = :branch")
     List<BranchEmployee> findByBranch(@Param("branch") Branch branch);
 
+    long countByBranch(Branch branch);
+
     @Query("SELECT be FROM BranchEmployee be JOIN FETCH be.branch WHERE be.employee = :employee")
     List<BranchEmployee> findByEmployee(@Param("employee") User employee);
 

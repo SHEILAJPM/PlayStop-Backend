@@ -25,5 +25,10 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
     long countByCourt(Court court);
 
+    // Trae promedio + total en una sola consulta para varias canchas a la
+    // vez (usado al listar canchas, para no hacer 2 consultas por fila).
+    @Query("SELECT r.court.id, AVG(r.rating), COUNT(r) FROM Review r WHERE r.court IN :courts GROUP BY r.court.id")
+    List<Object[]> findRatingStatsByCourts(@Param("courts") List<Court> courts);
+
     long countByUser(User user);
 }

@@ -30,8 +30,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -54,10 +56,7 @@ public class CourtService {
 
     // Obtener todas las canchas activas
     public List<CourtResponse> getAllCourts() {
-        return courtRepository.findByActiveTrue()
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        return toResponseList(courtRepository.findByActiveTrue());
     }
 
     // Obtener cancha por ID
@@ -153,7 +152,7 @@ public class CourtService {
             courts = courtRepository.findByOwnerAndActiveTrue(currentUser);
         }
 
-        return courts.stream().map(this::toResponse).toList();
+        return toResponseList(courts);
     }
 
     // Resuelve y valida la sucursal opcional de una cancha: un EMPLOYEE debe
@@ -239,6 +238,28 @@ public class CourtService {
     private CourtResponse toResponse(Court court) {
         Double avgRating = reviewRepository.findAverageRatingByCourt(court).orElse(null);
         long reviewCount = reviewRepository.countByCourt(court);
+        return toResponse(court, avgRating, reviewCount);
+    }
+
+    // Arma la respuesta de varias canchas trayendo el promedio/total de
+    // reseñas en una sola consulta agregada, en vez de 2 consultas por cancha.
+    private List<CourtResponse> toResponseList(List<Court> courts) {
+        if (courts.isEmpty()) return List.of();
+
+        Map<UUID, Object[]> statsByCourtId = reviewRepository.findRatingStatsByCourts(courts).stream()
+                .collect(Collectors.toMap(row -> (UUID) row[0], row -> row));
+
+        return courts.stream()
+                .map(court -> {
+                    Object[] stats = statsByCourtId.get(court.getId());
+                    Double avgRating = stats != null ? (Double) stats[1] : null;
+                    long reviewCount = stats != null ? (Long) stats[2] : 0L;
+                    return toResponse(court, avgRating, reviewCount);
+                })
+                .toList();
+    }
+
+    private CourtResponse toResponse(Court court, Double avgRating, long reviewCount) {
         return CourtResponse.builder()
                 .id(court.getId())
                 .name(court.getName())

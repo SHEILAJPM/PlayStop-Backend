@@ -35,4 +35,8 @@ public interface CourtRepository extends JpaRepository<Court, UUID> {
     // Usado por AdminController para el listado global — evita N+1 sobre owner
     @Query("SELECT c FROM Court c JOIN FETCH c.owner")
     List<Court> findAllWithOwner();
+
+    // Conteo de canchas por dueño en una sola consulta (evita 1 consulta por owner)
+    @Query("SELECT c.owner.id, COUNT(c) FROM Court c GROUP BY c.owner.id")
+    List<Object[]> countGroupedByOwner();
 }
