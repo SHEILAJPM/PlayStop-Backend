@@ -286,7 +286,7 @@ public class AdminController {
     @GetMapping("/courts")
     @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> getAllCourts() {
-        List<Map<String, Object>> result = courtRepository.findAll().stream()
+        List<Map<String, Object>> result = courtRepository.findAllWithOwner().stream()
             .map(c -> {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("id",           c.getId().toString());
@@ -318,7 +318,7 @@ public class AdminController {
     @GetMapping("/all-reservations")
     @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> getAllReservations() {
-        List<Map<String, Object>> result = reservationRepository.findAll().stream()
+        List<Map<String, Object>> result = reservationRepository.findAllWithUserAndCourtOwner().stream()
             .map(r -> {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("id",          r.getId().toString());

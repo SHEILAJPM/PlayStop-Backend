@@ -14,9 +14,11 @@ public interface PayoutRequestRepository extends JpaRepository<PayoutRequest, ja
 
     List<PayoutRequest> findByOwnerOrderByRequestedAtDesc(User owner);
 
+    @Query("SELECT p FROM PayoutRequest p JOIN FETCH p.owner ORDER BY p.requestedAt DESC")
     List<PayoutRequest> findAllByOrderByRequestedAtDesc();
 
-    List<PayoutRequest> findByStatusOrderByRequestedAtDesc(PayoutStatus status);
+    @Query("SELECT p FROM PayoutRequest p JOIN FETCH p.owner WHERE p.status = :status ORDER BY p.requestedAt DESC")
+    List<PayoutRequest> findByStatusOrderByRequestedAtDesc(@Param("status") PayoutStatus status);
 
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM PayoutRequest p WHERE p.owner = :owner AND p.status IN :statuses")
     BigDecimal sumAmountByOwnerAndStatusIn(@Param("owner") User owner, @Param("statuses") List<PayoutStatus> statuses);

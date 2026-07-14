@@ -14,9 +14,11 @@ import java.util.UUID;
 
 public interface ReservationRepository extends JpaRepository<Reservation, UUID> {
 
-    List<Reservation> findByUser(User user);
+    @Query("SELECT r FROM Reservation r JOIN FETCH r.user JOIN FETCH r.court WHERE r.user = :user")
+    List<Reservation> findByUser(@Param("user") User user);
 
-    List<Reservation> findByCourt(Court court);
+    @Query("SELECT r FROM Reservation r JOIN FETCH r.user WHERE r.court = :court")
+    List<Reservation> findByCourt(@Param("court") Court court);
 
     @Query("SELECT r.slotHour, r.durationHours FROM Reservation r WHERE r.court = :court AND r.date = :date AND r.status != :cancelled")
     List<Object[]> findOccupiedRanges(Court court, LocalDate date, ReservationStatus cancelled);
@@ -34,9 +36,17 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     );
 
     // ✅ Nuevo — usado por ReminderScheduler
+    @Query("""
+        SELECT r FROM Reservation r JOIN FETCH r.user JOIN FETCH r.court
+        WHERE r.date = :date AND r.slotHour = :slotHour AND r.status = :status AND r.reminderSent = false
+        """)
     List<Reservation> findByDateAndSlotHourAndStatusAndReminderSentFalse(
-        LocalDate date, int slotHour, ReservationStatus status
+        @Param("date") LocalDate date, @Param("slotHour") int slotHour, @Param("status") ReservationStatus status
     );
+
+    // Usado por AdminController para el listado global — evita N+1 sobre user/court/owner
+    @Query("SELECT r FROM Reservation r JOIN FETCH r.user JOIN FETCH r.court c JOIN FETCH c.owner")
+    List<Reservation> findAllWithUserAndCourtOwner();
 
     long countByStatus(ReservationStatus status);
 
