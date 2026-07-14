@@ -26,20 +26,20 @@
       "description": "Direccion de correo electronico del remitente de notificaciones"
     },
     {
-      "name": "twilio.account.sid",
+      "name": "whatsapp.cloud.token",
       "type": "java.lang.String",
-      "description": "Account SID de Twilio para envio de mensajes WhatsApp"
+      "description": "Access token permanente de Meta Cloud API para envio de mensajes WhatsApp"
     },
     {
-      "name": "twilio.auth.token",
+      "name": "whatsapp.cloud.phone-number-id",
       "type": "java.lang.String",
-      "description": "Auth Token de Twilio"
+      "description": "Phone Number ID de WhatsApp Business asignado por Meta"
     },
     {
-      "name": "twilio.whatsapp.from",
+      "name": "whatsapp.cloud.api-version",
       "type": "java.lang.String",
-      "description": "Numero de WhatsApp emisor configurado en Twilio Sandbox",
-      "defaultValue": "whatsapp:+14155238886"
+      "description": "Version de la Graph API de Meta usada para el envio de mensajes",
+      "defaultValue": "v23.0"
     }
   ]
 }

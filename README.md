@@ -15,7 +15,7 @@ pagos, matchmaking, referidos y notificaciones para la plataforma PlayStop.
 | Persistencia | Hibernate + PostgreSQL (Neon) |
 | Email | Brevo (API HTTP) |
 | Pagos | Stripe (Checkout Sessions + Webhooks) |
-| Notificaciones | WhatsApp Business API (Twilio) + Firebase Cloud Messaging |
+| Notificaciones | WhatsApp Business API (Meta Cloud API) + Firebase Cloud Messaging |
 | Imágenes | Cloudinary |
 | Build | Maven Wrapper (no requiere instalar Maven aparte) |
 | Deploy | Docker + Render |
