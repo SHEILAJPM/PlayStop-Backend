@@ -4,6 +4,7 @@ import com.playstop.backend.entity.Court;
 import com.playstop.backend.entity.Reservation;
 import com.playstop.backend.entity.User;
 import com.playstop.backend.enums.ReservationStatus;
+import com.playstop.backend.repository.BranchEmployeeRepository;
 import com.playstop.backend.repository.CourtRepository;
 import com.playstop.backend.repository.ReservationRepository;
 import com.playstop.backend.repository.UserRepository;
@@ -46,6 +47,8 @@ class ReservationServiceTest {
     private GamificationService gamificationService;
     @Mock
     private CourtAccessService courtAccessService;
+    @Mock
+    private BranchEmployeeRepository branchEmployeeRepository;
 
     private ReservationService reservationService;
 
@@ -54,7 +57,7 @@ class ReservationServiceTest {
     @BeforeEach
     void setUp() {
         reservationService = new ReservationService(
-                reservationRepository, courtRepository, userRepository, emailService, qrService, whatsAppService, courtAccessService);
+                reservationRepository, courtRepository, userRepository, emailService, qrService, whatsAppService, courtAccessService, branchEmployeeRepository);
         ReflectionTestUtils.setField(reservationService, "gamificationService", gamificationService);
 
         User player = User.builder().id(UUID.randomUUID()).name("Jugador").email("jugador@test.com").phone("999999999").build();

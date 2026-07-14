@@ -4,10 +4,14 @@ import com.playstop.backend.exception.BusinessException;
 
 import com.playstop.backend.dto.request.ReservationRequest;
 import com.playstop.backend.dto.response.ReservationResponse;
+import com.playstop.backend.entity.Branch;
+import com.playstop.backend.entity.BranchEmployee;
 import com.playstop.backend.entity.Court;
 import com.playstop.backend.entity.Reservation;
 import com.playstop.backend.entity.User;
 import com.playstop.backend.enums.ReservationStatus;
+import com.playstop.backend.enums.Role;
+import com.playstop.backend.repository.BranchEmployeeRepository;
 import com.playstop.backend.repository.CourtRepository;
 import com.playstop.backend.repository.ReservationRepository;
 import com.playstop.backend.repository.UserRepository;
@@ -41,6 +45,7 @@ public class ReservationService {
     private final QrService qrService;
     private final WhatsAppService whatsAppService;
     private final CourtAccessService courtAccessService;
+    private final BranchEmployeeRepository branchEmployeeRepository;
 
     @Lazy
     @Autowired
@@ -227,6 +232,29 @@ public class ReservationService {
                 .stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    // Reservas de todas las canchas administrables por el usuario actual
+    // (dueño o empleado), en una sola consulta en vez de una por cancha.
+    public List<ReservationResponse> getReservationsForCurrentOwner() {
+        User currentUser = getCurrentUser();
+        List<Court> courts = currentUser.getRole() == Role.EMPLOYEE
+                ? resolveEmployeeCourts(currentUser)
+                : courtRepository.findByOwnerAndActiveTrue(currentUser);
+
+        if (courts.isEmpty()) return List.of();
+        return reservationRepository.findByCourtIn(courts)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private List<Court> resolveEmployeeCourts(User employee) {
+        List<Branch> branches = branchEmployeeRepository.findByEmployee(employee).stream()
+                .map(BranchEmployee::getBranch)
+                .distinct()
+                .toList();
+        return branches.isEmpty() ? List.of() : courtRepository.findByBranchInAndActiveTrue(branches);
     }
 
     public ReservationResponse cancelReservation(UUID reservationId) {

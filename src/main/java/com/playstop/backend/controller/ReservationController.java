@@ -52,6 +52,12 @@ public class ReservationController {
         return ResponseEntity.ok(reservationService.getReservationsByCourt(courtId));
     }
 
+    @GetMapping("/owner")
+    @PreAuthorize("hasRole('OWNER') or hasRole('EMPLOYEE')")
+    public ResponseEntity<List<ReservationResponse>> getOwnerReservations() {
+        return ResponseEntity.ok(reservationService.getReservationsForCurrentOwner());
+    }
+
     @PatchMapping("/{id}/cancel-by-owner")
     @PreAuthorize("hasRole('OWNER') or hasRole('EMPLOYEE')")
     public ResponseEntity<ReservationResponse> cancelReservationByOwner(@PathVariable UUID id) {

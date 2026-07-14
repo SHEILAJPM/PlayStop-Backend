@@ -20,6 +20,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     @Query("SELECT r FROM Reservation r JOIN FETCH r.user WHERE r.court = :court")
     List<Reservation> findByCourt(@Param("court") Court court);
 
+    // Usado por el dashboard de propietario para traer reservas de todas
+    // sus canchas en una sola consulta, en vez de una por cancha.
+    @Query("SELECT r FROM Reservation r JOIN FETCH r.user WHERE r.court IN :courts")
+    List<Reservation> findByCourtIn(@Param("courts") List<Court> courts);
+
     @Query("SELECT r.slotHour, r.durationHours FROM Reservation r WHERE r.court = :court AND r.date = :date AND r.status != :cancelled")
     List<Object[]> findOccupiedRanges(Court court, LocalDate date, ReservationStatus cancelled);
 
