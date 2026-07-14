@@ -55,8 +55,12 @@ public class PaymentService {
         Stripe.apiKey = stripeSecretKey;
     }
 
+    // Sin transaccion propia: findByIdWithDetails ya trae user/court/owner
+    // resueltos en una sola consulta, asi que no hace falta mantener una
+    // sesion/conexion abierta durante la llamada HTTP a Stripe.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public String createCheckoutSession(UUID reservationId, UUID currentUserId) {
-        Reservation reservation = reservationRepository.findById(reservationId)
+        Reservation reservation = reservationRepository.findByIdWithDetails(reservationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reserva no encontrada"));
 
         if (!reservation.getUser().getId().equals(currentUserId)) {

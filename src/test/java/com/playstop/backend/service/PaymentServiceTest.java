@@ -73,7 +73,7 @@ class PaymentServiceTest {
 
     @Test
     void createCheckoutSession_reservationNotFound_throws404() {
-        when(reservationRepository.findById(any())).thenReturn(Optional.empty());
+        when(reservationRepository.findByIdWithDetails(any())).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> paymentService.createCheckoutSession(UUID.randomUUID(), userId));
@@ -83,7 +83,7 @@ class PaymentServiceTest {
 
     @Test
     void createCheckoutSession_notOwner_throws403() {
-        when(reservationRepository.findById(reservation.getId())).thenReturn(Optional.of(reservation));
+        when(reservationRepository.findByIdWithDetails(reservation.getId())).thenReturn(Optional.of(reservation));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> paymentService.createCheckoutSession(reservation.getId(), UUID.randomUUID()));
@@ -94,7 +94,7 @@ class PaymentServiceTest {
     @Test
     void createCheckoutSession_notPending_throws400() {
         reservation.setStatus(ReservationStatus.CONFIRMED);
-        when(reservationRepository.findById(reservation.getId())).thenReturn(Optional.of(reservation));
+        when(reservationRepository.findByIdWithDetails(reservation.getId())).thenReturn(Optional.of(reservation));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> paymentService.createCheckoutSession(reservation.getId(), userId));
@@ -104,7 +104,7 @@ class PaymentServiceTest {
 
     @Test
     void createCheckoutSession_success_savesPaymentWithStripeSessionId() throws Exception {
-        when(reservationRepository.findById(reservation.getId())).thenReturn(Optional.of(reservation));
+        when(reservationRepository.findByIdWithDetails(reservation.getId())).thenReturn(Optional.of(reservation));
         when(paymentRepository.findByReservation(reservation)).thenReturn(Optional.empty());
 
         Session stripeSession = new Session();
