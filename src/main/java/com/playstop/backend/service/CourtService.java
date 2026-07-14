@@ -271,7 +271,6 @@ public class CourtService {
                 .imageUrl(court.getImageUrl())
                 .active(court.isActive())
                 .ownerName(court.getOwner().getName())
-                .ownerEmail(court.getOwner().getEmail())
                 .city(court.getCity())
                 .district(court.getDistrict())
                 .averageRating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : null)

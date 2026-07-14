@@ -19,7 +19,6 @@ public class CourtResponse {
     private String imageUrl;
     private boolean active;
     private String ownerName;
-    private String ownerEmail;
     private String city;
     private String district;
     private Double averageRating;
