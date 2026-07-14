@@ -37,7 +37,13 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             "/api/auth/reset-password"
     );
 
+    // Bucket separado del de auth: /api/upload lo golpea un usuario ya
+    // autenticado (otro modelo de amenaza — abuso de costo, no fuerza
+    // bruta), no tiene sentido que comparta presupuesto con login/registro.
+    private static final Set<String> UPLOAD_PATHS = Set.of("/api/upload");
+
     private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Bucket> uploadBuckets = new ConcurrentHashMap<>();
 
     @Override
     protected void doFilterInternal(
@@ -46,12 +52,24 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             @Nonnull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        if (!LIMITED_PATHS.contains(request.getRequestURI())) {
+        String uri = request.getRequestURI();
+        if (LIMITED_PATHS.contains(uri)) {
+            enforce(buckets, this::newAuthBucket, request, response, filterChain);
+        } else if (UPLOAD_PATHS.contains(uri)) {
+            enforce(uploadBuckets, this::newUploadBucket, request, response, filterChain);
+        } else {
             filterChain.doFilter(request, response);
-            return;
         }
+    }
 
-        Bucket bucket = buckets.computeIfAbsent(HttpUtils.getClientIp(request), ip -> newBucket());
+    private void enforce(
+            ConcurrentHashMap<String, Bucket> bucketsByIp,
+            java.util.function.Supplier<Bucket> bucketFactory,
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
+        Bucket bucket = bucketsByIp.computeIfAbsent(HttpUtils.getClientIp(request), ip -> bucketFactory.get());
 
         if (bucket.tryConsume(1)) {
             filterChain.doFilter(request, response);
@@ -64,9 +82,15 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         }
     }
 
-    private Bucket newBucket() {
+    private Bucket newAuthBucket() {
         return Bucket.builder()
                 .addLimit(Bandwidth.builder().capacity(10).refillGreedy(10, Duration.ofMinutes(1)).build())
+                .build();
+    }
+
+    private Bucket newUploadBucket() {
+        return Bucket.builder()
+                .addLimit(Bandwidth.builder().capacity(20).refillGreedy(20, Duration.ofMinutes(1)).build())
                 .build();
     }
 }
