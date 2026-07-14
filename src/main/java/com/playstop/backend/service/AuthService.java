@@ -182,6 +182,13 @@ public class AuthService {
             throw new BusinessException("No se pudo obtener el email de Google");
         }
 
+        // Sin esto, un email no verificado por Google (posible en cuentas
+        // federadas/SAML) se aceptaria igual, permitiendo vincularse a una
+        // cuenta existente con solo controlar ese email en el IdP externo.
+        if (!"true".equals(info.get("email_verified"))) {
+            throw new BusinessException("El email de tu cuenta de Google no está verificado");
+        }
+
         // Google firma el token para el "aud" (client id) de la app que lo
         // solicitó, sea cual sea. Si no comparamos ese campo contra nuestro
         // propio client id, aceptaríamos igual un token legítimo emitido para
