@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.http.HttpStatus;
@@ -102,17 +103,20 @@ public class ReservationService {
     }
 
     /**
-     * Invocado desde el webhook de Stripe cuando el pago se completa.
-     * Marca la reserva como CONFIRMED y recién ahí dispara notificaciones.
+     * Invocado desde el webhook de Stripe cuando el pago se completa. Marca
+     * la reserva como CONFIRMED (transaccion corta) y devuelve los datos
+     * necesarios para las notificaciones, que el llamador debe enviar
+     * llamando aparte a sendConfirmationNotifications — asi la conexion a BD
+     * no queda retenida durante las llamadas HTTP lentas (email/WhatsApp).
      */
-    public void confirmReservationPayment(UUID reservationId) {
+    public ConfirmationNotificationData confirmReservationPayment(UUID reservationId) {
         Reservation saved = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException("Reserva no encontrada"));
 
         if (saved.getStatus() != ReservationStatus.PENDING) {
             log.warn("Se intentó confirmar el pago de una reserva que no está PENDING: {} ({})",
                     reservationId, saved.getStatus());
-            return;
+            return null;
         }
 
         saved.setStatus(ReservationStatus.CONFIRMED);
@@ -124,49 +128,69 @@ public class ReservationService {
 
         String slot = String.format("%02d:00 - %02d:00", saved.getSlotHour(), saved.getSlotHour() + saved.getDurationHours());
 
+        return new ConfirmationNotificationData(
+            saved.getId(), user.getEmail(), user.getName(), user.getPhone(),
+            court.getName(), court.getOwner().getEmail(), court.getOwner().getName(),
+            saved.getDate().toString(), slot, saved.getTotalAmount()
+        );
+    }
+
+    /**
+     * QR + emails + WhatsApp de confirmacion. Propagation.NOT_SUPPORTED
+     * asegura que esto corre sin transaccion/conexion a BD abierta, para no
+     * agotar el pool (5 conexiones) mientras esperamos a Brevo/Meta.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void sendConfirmationNotifications(ConfirmationNotificationData data) {
         // 1. Generar QR y enviarlo al jugador en el email de confirmación
         try {
             String qrContent = String.format(
                 "PLAYSTOP|ID:%s|CANCHA:%s|FECHA:%s|HORA:%s|CLIENTE:%s|MONTO:S/ %.2f",
-                saved.getId(), court.getName(), saved.getDate(), slot,
-                user.getName(), saved.getTotalAmount()
+                data.reservationId(), data.courtName(), data.date(), data.slot(),
+                data.userName(), data.totalAmount()
             );
             byte[] qrBytes = qrService.generateQr(qrContent);
             emailService.sendReservationConfirmationWithQr(
-                user.getEmail(), user.getName(), court.getName(),
-                saved.getDate().toString(), slot, saved.getId().toString(), qrBytes
+                data.userEmail(), data.userName(), data.courtName(),
+                data.date(), data.slot(), data.reservationId().toString(), qrBytes
             );
-            log.info("Email de confirmación con QR enviado al jugador: {}", user.getEmail());
+            log.info("Email de confirmación con QR enviado al jugador: {}", data.userEmail());
         } catch (Exception ex) {
-            log.error("Error al generar QR para reserva {}, enviando email sin QR: {}", saved.getId(), ex.getMessage());
+            log.error("Error al generar QR para reserva {}, enviando email sin QR: {}", data.reservationId(), ex.getMessage());
             emailService.sendReservationConfirmation(
-                user.getEmail(), user.getName(), court.getName(),
-                saved.getDate().toString(), slot
+                data.userEmail(), data.userName(), data.courtName(),
+                data.date(), data.slot()
             );
         }
 
         // 2. Enviar términos y condiciones al jugador (email separado)
         emailService.sendTermsAndConditionsToPlayer(
-            user.getEmail(), user.getName(), court.getName(),
-            saved.getDate().toString(), slot, saved.getId().toString()
+            data.userEmail(), data.userName(), data.courtName(),
+            data.date(), data.slot(), data.reservationId().toString()
         );
-        log.info("Email de términos y condiciones enviado al jugador: {}", user.getEmail());
+        log.info("Email de términos y condiciones enviado al jugador: {}", data.userEmail());
 
         // 3. WhatsApp (no-op si Meta Cloud API no está configurado)
         whatsAppService.sendReservationConfirmation(
-            user.getPhone(), user.getName(), court.getName(),
-            saved.getDate().toString(), slot,
-            saved.getTotalAmount().toPlainString()
+            data.userPhone(), data.userName(), data.courtName(),
+            data.date(), data.slot(),
+            data.totalAmount().toPlainString()
         );
 
         // 4. Notificar al propietario sobre la nueva reserva
         emailService.sendNewReservationNotificationToOwner(
-            court.getOwner().getEmail(), court.getOwner().getName(),
-            user.getName(), user.getEmail(),
-            court.getName(), saved.getDate().toString(), slot,
-            saved.getId().toString(), saved.getTotalAmount().doubleValue()
+            data.ownerEmail(), data.ownerName(),
+            data.userName(), data.userEmail(),
+            data.courtName(), data.date(), data.slot(),
+            data.reservationId().toString(), data.totalAmount().doubleValue()
         );
     }
+
+    public record ConfirmationNotificationData(
+        UUID reservationId, String userEmail, String userName, String userPhone,
+        String courtName, String ownerEmail, String ownerName,
+        String date, String slot, java.math.BigDecimal totalAmount
+    ) {}
 
     /**
      * Invocado desde el webhook de Stripe cuando la sesión de checkout expira

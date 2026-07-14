@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
@@ -110,6 +111,11 @@ public class PaymentService {
         }
     }
 
+    // Sin transaccion propia: los pasos internos (paymentRepository.save,
+    // reservationService.confirmReservationPayment) ya son atomicos por su
+    // cuenta, y esto evita retener una conexion del pool durante las
+    // llamadas HTTP lentas de sendConfirmationNotifications.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void handleWebhook(String payload, String sigHeader) {
         Event event;
         try {
@@ -154,7 +160,10 @@ public class PaymentService {
                     payment.setPaidAt(java.time.LocalDateTime.now());
                     paymentRepository.save(payment);
                 });
-                reservationService.confirmReservationPayment(reservationId);
+                var notification = reservationService.confirmReservationPayment(reservationId);
+                if (notification != null) {
+                    reservationService.sendConfirmationNotifications(notification);
+                }
                 log.info("Pago confirmado vía Stripe para reserva {}", reservationId);
             }
             case "checkout.session.expired" -> {

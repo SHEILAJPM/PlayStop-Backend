@@ -149,11 +149,16 @@ class PaymentServiceTest {
 
         Payment payment = Payment.builder().reservation(reservation).stripeSessionId("cs_test_123").status(PaymentStatus.PENDING).build();
         when(paymentRepository.findByStripeSessionId("cs_test_123")).thenReturn(Optional.of(payment));
+        var notificationData = new ReservationService.ConfirmationNotificationData(
+                reservation.getId(), "jugador@test.com", "Jugador", null,
+                "Cancha 1", "owner@test.com", "Dueño", "2026-07-20", "10:00 - 11:00", BigDecimal.valueOf(50));
+        when(reservationService.confirmReservationPayment(reservation.getId())).thenReturn(notificationData);
 
         withWebhookEvent("checkout.session.completed", stripeSession,
                 () -> paymentService.handleWebhook("payload", "sig"));
 
         verify(reservationService).confirmReservationPayment(reservation.getId());
+        verify(reservationService).sendConfirmationNotifications(notificationData);
         assertEquals(PaymentStatus.PAID, payment.getStatus());
     }
 

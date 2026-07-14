@@ -73,19 +73,17 @@ class ReservationServiceTest {
     }
 
     @Test
-    void confirmReservationPayment_pending_confirmsAndTriggersNotifications() throws Exception {
+    void confirmReservationPayment_pending_confirmsAndReturnsNotificationData() {
         when(reservationRepository.findById(reservation.getId())).thenReturn(Optional.of(reservation));
         when(reservationRepository.save(any(Reservation.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(qrService.generateQr(any())).thenReturn(new byte[]{1, 2, 3});
 
-        reservationService.confirmReservationPayment(reservation.getId());
+        var data = reservationService.confirmReservationPayment(reservation.getId());
 
         assertEquals(ReservationStatus.CONFIRMED, reservation.getStatus());
         verify(gamificationService).onReservationCreated(reservation.getUser());
-        verify(emailService).sendReservationConfirmationWithQr(
-                eq("jugador@test.com"), any(), any(), any(), any(), any(), any());
-        verify(emailService).sendNewReservationNotificationToOwner(
-                eq("owner@test.com"), any(), any(), any(), any(), any(), any(), any(), anyDouble());
+        assertEquals("jugador@test.com", data.userEmail());
+        assertEquals("owner@test.com", data.ownerEmail());
+        verifyNoInteractions(emailService, qrService, whatsAppService);
     }
 
     @Test
@@ -93,11 +91,31 @@ class ReservationServiceTest {
         reservation.setStatus(ReservationStatus.CANCELLED);
         when(reservationRepository.findById(reservation.getId())).thenReturn(Optional.of(reservation));
 
-        reservationService.confirmReservationPayment(reservation.getId());
+        var data = reservationService.confirmReservationPayment(reservation.getId());
 
         assertEquals(ReservationStatus.CANCELLED, reservation.getStatus());
+        assertEquals(null, data);
         verify(reservationRepository, never()).save(any());
         verifyNoInteractions(gamificationService, emailService, qrService, whatsAppService);
+    }
+
+    @Test
+    void sendConfirmationNotifications_sendsQrEmailAndOwnerNotification() throws Exception {
+        when(qrService.generateQr(any())).thenReturn(new byte[]{1, 2, 3});
+        var data = new ReservationService.ConfirmationNotificationData(
+                reservation.getId(), "jugador@test.com", "Jugador", "999999999",
+                "Cancha 1", "owner@test.com", "Dueño",
+                reservation.getDate().toString(), "10:00 - 11:00", reservation.getTotalAmount()
+        );
+
+        reservationService.sendConfirmationNotifications(data);
+
+        verify(emailService).sendReservationConfirmationWithQr(
+                eq("jugador@test.com"), any(), any(), any(), any(), any(), any());
+        verify(emailService).sendNewReservationNotificationToOwner(
+                eq("owner@test.com"), any(), any(), any(), any(), any(), any(), any(), anyDouble());
+        verify(whatsAppService).sendReservationConfirmation(
+                eq("999999999"), any(), any(), any(), any(), any());
     }
 
     @Test
