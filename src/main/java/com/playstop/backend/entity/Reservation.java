@@ -15,7 +15,9 @@ import java.util.UUID;
     uniqueConstraints = @UniqueConstraint(columnNames = {"court_id", "date", "slot_hour"}),
     indexes = {
         @Index(name = "idx_reservations_user_id", columnList = "user_id"),
-        @Index(name = "idx_reservations_court_id", columnList = "court_id")
+        @Index(name = "idx_reservations_court_id", columnList = "court_id"),
+        // Cubre la consulta de ReminderScheduler (corre cada 5 min filtrando por estos 3 campos)
+        @Index(name = "idx_reservations_date_slot_status", columnList = "date, slot_hour, status")
     }
 )
 @Getter
