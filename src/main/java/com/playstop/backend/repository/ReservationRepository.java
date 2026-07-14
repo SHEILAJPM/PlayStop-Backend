@@ -34,7 +34,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     );
 
     // ✅ Nuevo — usado por ReminderScheduler
-    List<Reservation> findByDateAndSlotHourAndStatus(
+    List<Reservation> findByDateAndSlotHourAndStatusAndReminderSentFalse(
         LocalDate date, int slotHour, ReservationStatus status
     );
 

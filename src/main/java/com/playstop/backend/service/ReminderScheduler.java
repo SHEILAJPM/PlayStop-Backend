@@ -27,9 +27,14 @@ public class ReminderScheduler {
         LocalDate today = LocalDate.now();
 
         List<Reservation> upcoming = reservationRepository
-                .findByDateAndSlotHourAndStatus(today, targetHour, ReservationStatus.CONFIRMED);
+                .findByDateAndSlotHourAndStatusAndReminderSentFalse(today, targetHour, ReservationStatus.CONFIRMED);
 
         for (Reservation r : upcoming) {
+            // Marcar primero evita reenvios si dos ticks del scheduler se
+            // solapan (ej. instancia lenta) o si corren varias instancias.
+            r.setReminderSent(true);
+            reservationRepository.save(r);
+
             String slot = r.getSlotHour() + ":00 - " + (r.getSlotHour() + r.getDurationHours()) + ":00";
             emailService.sendReservationReminder(
                 r.getUser().getEmail(), r.getUser().getName(),

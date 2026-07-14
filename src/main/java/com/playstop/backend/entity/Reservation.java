@@ -57,6 +57,10 @@ public class Reservation {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Builder.Default
+    @Column(name = "reminder_sent", nullable = false)
+    private boolean reminderSent = false;
+
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
